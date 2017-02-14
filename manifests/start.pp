@@ -14,15 +14,19 @@ class pure_postgres::start
       user    => $postgres_user,
       command => "/etc/init.d/postgres start",
       creates => "$pg_pid_file",
-      onlyif  => "test -f $pg_data_dir/PG_VERSION",
-      path     => '$pg_bin_dir:/usr/local/bin:/bin',
+      onlyif  => "test -f '$pg_data_dir/PG_VERSION'",
+      path    => '$pg_bin_dir:/usr/local/bin:/bin',
+      cwd     => $pg_bin_dir,
    } ->
 
    exec { "wait for postgres to finish starting":
       user     => $postgres_user,
       command  => $cmd,
+      onlyif   => "test -f '$pg_pid_file'",
       path     => '$pg_bin_dir:/usr/local/bin:/bin',
+      cwd      => $pg_bin_dir,
       loglevel => 'debug',
    }
+
 }
 

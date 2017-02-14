@@ -24,6 +24,7 @@ class pure_postgres::postgres_user
       user    => $postgres_user,
       command => '/usr/bin/ssh-keygen -t rsa -P "" -f ~/.ssh/id_rsa',
       creates => "/home/$postgres_user/.ssh/id_rsa",
+      cwd     => $pg_bin_dir,
    }
 
 

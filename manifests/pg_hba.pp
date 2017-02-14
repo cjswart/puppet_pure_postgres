@@ -20,7 +20,6 @@ define pure_postgres::pg_hba
    exec { "exec $cmd":
       user     => $pure_postgres::postgres_user,
       command  => $cmd,
-      loglevel => 'debug',
       require  => File["$pure_postgres::pg_bin_dir/modify_pg_hba.py"]
    }
 
