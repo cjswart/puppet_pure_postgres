@@ -22,9 +22,18 @@ define pure_postgres::role
       }
    }
 
+
+   if $searchpath {
+      $searchpath_str = join($searchpath, ',')
+      $sql_searchpath = "ALTER ROLE $name SET search_path TO $searchpath_str;"
+   } 
+   else {
+      $sql_searchpath2 = ""
+   }
+
    pure_postgres::run_sql { "create role $name":
-      sql     => "CREATE ROLE $name $pwsql;",
-      unless  => "SELECT * FROM pg_roles where rolname = '$name'",
+      sql    => "CREATE ROLE $name $pwsql; $sql_searchpath",
+      unless => "SELECT * FROM pg_roles where rolname = '$name'",
    }
 
    if $with_db {
@@ -46,13 +55,6 @@ define pure_postgres::role
       pure_postgres::run_sql { "role $name with replication":
          sql => "ALTER ROLE $name REPLICATION;",
          unless  => "SELECT * FROM pg_roles where rolname = '$name' and rolreplication;",
-      }
-   }
-
-   if $searchpath {
-      $sql_searchpath = join($searchpath, ',')
-      pure_postgres::run_sql { "searchpath $name":
-         sql => "ALTER ROLE $name SET search_path TO $sql_searchpath;",
       }
    }
 
