@@ -8,10 +8,11 @@ class pure_postgres::reload
 {
    # Do what is needed for postgresql service.
    exec { "service postgres reload":
-      user     => $postgres_user,
-      command  => "/etc/init.d/postgres reload",
-      onlyif   => "/bin/test -f $pg_pid_file",
-      cwd      => $pg_bin_dir,
+      user        => $postgres_user,
+      command     => "/etc/init.d/postgres reload",
+      onlyif      => "/bin/test -f $pg_pid_file",
+      cwd         => $pg_bin_dir,
+      refreshonly => true,
    }
 }
 
