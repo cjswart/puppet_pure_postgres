@@ -20,7 +20,8 @@ define pure_postgres::pg_hba
    exec { "exec $cmd":
       user     => $pure_postgres::postgres_user,
       command  => $cmd,
-      require  => File["$pure_postgres::pg_bin_dir/modify_pg_hba.py"]
+      require  => File["$pure_postgres::pg_bin_dir/modify_pg_hba.py"],
+      unless   => "$cmd --check",
    }
 
 }

@@ -8,6 +8,7 @@ import re
 import tempfile
 import shutil
 import subprocess
+import sys
 
 class TouchError(Exception):
     pass
@@ -510,6 +511,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Modify entries in pg_hba')
     parser.add_argument('-b', '--backup',         help='Create a backup of the file before changing it.', action='store_true')
     parser.add_argument('-c', '--create',         help="Create the file if it doesn't exist",             action='store_false')
+    parser.add_argument(      '--check',          help="Only check if changes are required.",             action='store_true')
     parser.add_argument('-d', '--databases',      help='List of databases',                               default='all')
     parser.add_argument('-f', '--file', '--dest', help='Path to file',                                    default='/etc/pgpure/postgres/9.6/data/pg_hba.conf')
     parser.add_argument('-g', '--group',          help='Default group ownership of file',                 default='postgres')
@@ -539,4 +541,10 @@ if __name__ == "__main__":
                 pg_hba.add_rule(rule)
             else:
                 pg_hba.remove_rule(rule)
-        pg_hba.write(options.reload)
+        if options.check:
+            if pg_hba.changed:
+                sys.exit(1)
+            else:
+                sys.exit(0)
+        else:
+            pg_hba.write(options.reload)
