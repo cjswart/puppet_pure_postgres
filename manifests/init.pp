@@ -14,11 +14,11 @@ class pure_postgres
 ) inherits pure_postgres::params
 {
 
-   class { 'pure_postgres::install':
-   } ->
+  class { 'pure_postgres::install':
+  } ->
 
-   class { 'pure_postgres::config':
-   }
+  class { 'pure_postgres::config':
+  }
 
 }
 
