@@ -18,11 +18,11 @@ class pure_postgres::repo
   $repo_url       = "${repo}/${version}/${dist}/${dist_version}/"
 
   yumrepo { "PostgresPURE":
-      baseurl => "${repo_url}",
-      descr => "Postgres PURE",
-      enabled => 1,
-      gpgcheck => 0
-    }
+    baseurl => "${repo_url}",
+    descr => "Postgres PURE",
+    enabled => 1,
+    gpgcheck => 0
+  }
 
 }
 

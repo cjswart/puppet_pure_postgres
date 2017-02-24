@@ -15,14 +15,14 @@ define pure_postgres::pg_hba
 )
 {
 
-   $cmd = shellquote( "$pure_postgres::pg_bin_dir/modify_pg_hba.py", '-d', $database, '-f', $pg_hba_file, '-m', $method, '-n', $netmask, '--state', $state, '-s', $source, '-t', $connection_type, '-u', $user , '--reload')
+  $cmd = shellquote( "$pure_postgres::pg_bin_dir/modify_pg_hba.py", '-d', $database, '-f', $pg_hba_file, '-m', $method, '-n', $netmask, '--state', $state, '-s', $source, '-t', $connection_type, '-u', $user , '--reload')
 
-   exec { "exec $cmd":
-      user     => $pure_postgres::postgres_user,
-      command  => $cmd,
-      require  => File["$pure_postgres::pg_bin_dir/modify_pg_hba.py"],
-      unless   => "$cmd --check",
-   }
+  exec { "exec $cmd":
+    user     => $pure_postgres::postgres_user,
+    command  => $cmd,
+    require  => File["$pure_postgres::pg_bin_dir/modify_pg_hba.py"],
+    unless   => "$cmd --check",
+  }
 
 }
 

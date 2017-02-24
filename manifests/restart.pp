@@ -4,10 +4,10 @@
 
 class pure_postgres::restart()
 {
-   class {'pure_postgres::stop':
-   } ->
+  class {'pure_postgres::stop':
+  } ->
 
-   class ('pure_postgres::start':
-   }
+  class ('pure_postgres::start':
+  }
 }
 
