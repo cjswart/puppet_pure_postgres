@@ -5,8 +5,8 @@ class pure_postgres::repo
 (
   $repo              = $pure_postgres::params::repo,
   $version           = $pure_postgres::params::version,
-  $package_name      = $pure_postgres::params::package_name,
-  $package_version   = $pure_postgres::params::package_version
+  $repo_package_name = $pure_postgres::params::repo_package_name,
+  $package_version   = $pure_postgres::params::package_version,
 ) inherits pure_postgres::params
 {
   $dist              = $::operatingsystem ?

@@ -3,20 +3,22 @@ class pure_postgres::params
 {
   $repo                 = 'http://base.splendiddata.com/postgrespure'
   $version              = '4'
-  $package_name         = 'postgrespure-release'
+  $repo_package_name    = 'postgrespure-release'
   $package_version      = 'latest'
-  $pg_version           = $version ?
-  {
+  $pg_version           = $version ? {
     '1' => '9.3',
     '2' => '9.4',
     '3' => '9.5',
     '4' => '9.6',
   }  
 
+  $pg_package_name      = "postgres-$pg_version"
   $pg_etc_dir           = "/etc/pgpure/postgres/$pg_version/data"
   $pg_data_dir          = "/var/pgpure/postgres/$pg_version/data"
+  $pg_xlog_dir          = "$pg_data_dir/pg_xlog"
   $pg_bin_dir           = "/usr/pgpure/postgres/$pg_version/bin"
   $pg_log_dir           = "/var/log/pgpure/postgres"
+  $pg_encoding          = 'UTF8'
 
   $do_initdb            = true
   $pg_hba_conf          = "$pg_etc_dir/pg_hba.conf"
