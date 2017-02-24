@@ -11,20 +11,20 @@ class pure_postgres::start
 
   # Do what is needed for postgresql service.
   exec { 'service postgres start':
-    user    => $::postgres_user,
+    user    => $pure_postgres::params::postgres_user,
     command => '/etc/init.d/postgres start',
-    creates => $::pg_pid_file,
-    onlyif  => "test -f '$::{pg_data_dir}/PG_VERSION'",
-    path    => "$::{pg_bin_dir}:/usr/local/bin:/bin",
-    cwd     => $::_bin_dir,
+    creates => $pure_postgres::params::pg_pid_file,
+    onlyif  => "test -f '${pure_postgres::params::pg_data_dir}/PG_VERSION'",
+    path    => "${pure_postgres::params::pg_bin_dir}:/usr/local/bin:/bin",
+    cwd     => $pure_postgres::params::pg_bin_dir,
   } ->
 
   exec { 'wait for postgres to finish starting':
-    user     => $::stgres_user,
-    command  => $::d,
-    onlyif   => "test -f '$::{pid_file}",
-    path     => "$::{pg_bin_dir}:/usr/local/bin:/bin",
-    cwd      => $::pg_bin_dir,
+    user     => $pure_postgres::params::postgres_user,
+    command  => $cmd,
+    onlyif   => "test -f '${pure_postgres::params::pid_file}",
+    path     => "${pure_postgres::params::pg_bin_dir}:/usr/local/bin:/bin",
+    cwd      => $pure_postgres::params::pg_bin_dir,
     loglevel => 'debug',
   }
 

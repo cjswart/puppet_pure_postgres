@@ -8,10 +8,10 @@ class pure_postgres::stop()
 {
   # Do what is needed for postgresql service.
   exec { 'service postgres stop':
-    user    => $::postgres_user,
+    user    => $pure_postgres::params::postgres_user,
     command => '/etc/init.d/postgres stop',
-    onlyif  => "/bin/test -f $::{pg_pid_file}",
-    cwd     => '/',
+    onlyif  => "/bin/test -f ${pure_postgres::params::pg_pid_file}",
+    cwd     => pure_postgres::params::pg_bin_dir,
   }
 }
 

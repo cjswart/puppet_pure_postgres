@@ -12,49 +12,49 @@ define pure_postgres::role
 {
 
   if $password_hash {
-    $pwsql = "password '$::{password_hash}' LOGIN"
+    $pwsql = "password '${password_hash}' LOGIN"
   } else {
     $pwsql = ''
   }
 
   if $with_db {
-    pure_postgres::db { $::name:
+    pure_postgres::db { $name:
     }
   }
 
 
   if $searchpath {
-    $::searchpath_str = join($::searchpath, ',')
-    $::sql_searchpath = "ALTER ROLE $::{name} SET search_path TO $::{searchpath_str};"
+    $searchpath_str = join($searchpath, ',')
+    $sql_searchpath = "ALTER ROLE ${name} SET search_path TO ${searchpath_str};"
   }
   else {
-    $::sql_searchpath2 = ''
+    $sql_searchpath2 = ''
   }
 
-  pure_postgres::run_sql { "create role $::{name}":
-    sql    => "CREATE ROLE $::{name} $::{pwsql}; $::{sql_searchpath}",
-    unless => "SELECT * FROM pg_roles where rolname = '$::{name}'",
+  pure_postgres::run_sql { "create role ${name}":
+    sql    => "CREATE ROLE ${name} ${pwsql}; ${sql_searchpath}",
+    unless => "SELECT * FROM pg_roles where rolname = '${name}'",
   }
 
   if $with_db {
-    pure_postgres::run_sql { "database $::{name} owner $::{owner}":
-      sql     => "ALTER DATABASE $::{name} OWNER TO $::{name};",
-      unless  => "SELECT * FROM pg_database where datname = '$::{name}' and datdba in (select oid from pg_roles where rolname = '$::{name}');",
-      require => [ Pure_postgres::Db[$::name], Pure_postgres::Run_sql["create role $::{name}"] ],
+    pure_postgres::run_sql { "database ${name} owner ${name}":
+      sql     => "ALTER DATABASE ${name} OWNER TO ${name};",
+      unless  => "SELECT * FROM pg_database where datname = '${name}' and datdba in (select oid from pg_roles where rolname = '${name}');",
+      require => [ Pure_postgres::Db[$name], Pure_postgres::Run_sql["create role ${name}"] ],
     }
   }
 
   if $superuser {
-    pure_postgres::run_sql { "role $::{name} with superuser":
-      sql    => "ALTER ROLE $::{name} SUPERUSER;",
-      unless => "SELECT * FROM pg_roles where rolname = '$::{name}' and rolsuper;",
+    pure_postgres::run_sql { "role ${name} with superuser":
+      sql    => "ALTER ROLE ${name} SUPERUSER;",
+      unless => "SELECT * FROM pg_roles where rolname = '${name}' and rolsuper;",
     }
   }
 
   if $replication {
-    pure_postgres::run_sql { "role $::{name} with replication":
-      sql    => "ALTER ROLE $::{name} REPLICATION;",
-      unless => "SELECT * FROM pg_roles where rolname = '$::{name}' and rolreplication;",
+    pure_postgres::run_sql { "role ${name} with replication":
+      sql    => "ALTER ROLE ${name} REPLICATION;",
+      unless => "SELECT * FROM pg_roles where rolname = '${name}' and rolreplication;",
     }
   }
 

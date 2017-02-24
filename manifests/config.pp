@@ -7,36 +7,36 @@ class pure_postgres::config
 ) inherits pure_postgres
 {
 
-  file { "$::{pg_bin_dir}/modify_pg_hba.py":
+  file { "${pure_postgres::params::pg_bin_dir}/modify_pg_hba.py":
     ensure  => 'present',
-    owner   => $::postgres_user,
-    group   => $::postgres_group,
+    owner   => $pure_postgres::params::postgres_user,
+    group   => $pure_postgres::params::postgres_group,
     mode    => '0750',
     source  => 'puppet:///modules/pure_postgres/pg_hba.py',
-    require => Package[$::pg_package_name],
+    require => Package[$pure_postgres::params::pg_package_name],
   }
 
   # create config directory
-  file { "$::{pg_etc_dir}/conf.d":
+  file { "${pure_postgres::params::pg_etc_dir}/conf.d":
     ensure  => 'directory',
-    owner   => $::postgres_user,
-    group   => $::postgres_group,
+    owner   => $pure_postgres::params::postgres_user,
+    group   => $pure_postgres::params::postgres_group,
     mode    => '0750',
-    require => Package[$::pg_package_name],
+    require => Package[$pure_postgres::params::pg_package_name],
   }
 
-  if $::doinitdb {
+  if $do_initdb {
     include pure_postgres::initdb
   }
 
-  file { "$::{pg_etc_dir}/postgresql.conf":
+  file { "${pure_postgres::params::pg_etc_dir}/postgresql.conf":
     ensure    => 'present',
-    owner     => $::postgres_user,
-    group     => $::postgres_group,
+    owner     => $pure_postgres::params::postgres_user,
+    group     => $pure_postgres::params::postgres_group,
     mode      => '0640',
     source    => 'puppet:///modules/pure_postgres/postgresql.conf',
     show_diff => false,
-    require   => Package[$::pg_package_name],
+    require   => Package[$pure_postgres::params::pg_package_name],
     before    => Class['pure_postgres::start'],
   }
 
