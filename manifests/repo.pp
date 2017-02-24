@@ -13,14 +13,14 @@ class pure_postgres::repo
   {
     'Centos' => 'centos'
   }
-  $dist_version      = $facts['os']['release']['major']
+  $dist_version = $facts['os']['release']['major']
 
-  $repo_url       = "${repo}/${version}/${dist}/${dist_version}/"
+  $repo_url = "${repo}/${version}/${dist}/${dist_version}/"
 
-  yumrepo { "PostgresPURE":
-    baseurl => "${repo_url}",
-    descr => "Postgres PURE",
-    enabled => 1,
+  yumrepo { 'PostgresPURE':
+    baseurl  => $::repo_url,
+    descr    => 'Postgres PURE',
+    enabled  => 1,
     gpgcheck => 0
   }
 

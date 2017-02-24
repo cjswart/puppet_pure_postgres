@@ -22,7 +22,7 @@ class pure_postgres::service
   }
 
   # Do what is needed for postgresql service.
-  class {"pure_postgres::$action":
+  class {"pure_postgres::${action}":
   }
 
 }
