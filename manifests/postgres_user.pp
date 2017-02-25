@@ -6,6 +6,12 @@ class pure_postgres::postgres_user
 ) inherits pure_postgres::params
 {
 
+  file { "/home/${pure_postgres::params::postgres_user}":
+    ensure => directory,
+    owner  => $pure_postgres::params::postgres_user,
+    group  => $pure_postgres::params::postgres_group,
+  }
+
   group { 'pgpure':
     ensure => present,
   } ->
