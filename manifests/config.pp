@@ -37,7 +37,7 @@ class pure_postgres::config
     source    => 'puppet:///modules/pure_postgres/postgresql.conf',
     show_diff => false,
     require   => Package[$pure_postgres::params::pg_package_name],
-    before    => Class['pure_postgres::start'],
+    notify    => Class['pure_postgres::start'],
   }
 
 }

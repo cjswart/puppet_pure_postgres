@@ -45,11 +45,11 @@ class pure_postgres::initdb
   }
 
   #Add conf.d to postgres.conf
-  file_line { 'confd':
-    path    => "${pure_postgres::params::pg_etc_dir}/postgresql.conf",
-    line    => "include_dir = 'conf.d'",
-    require => File["${pure_postgres::params::pg_etc_dir}/postgresql.conf"],
-  }
+#  file_line { 'confd':
+#    path    => "${pure_postgres::params::pg_etc_dir}/postgresql.conf",
+#    line    => "include_dir = 'conf.d'",
+#    require => File["${pure_postgres::params::pg_etc_dir}/postgresql.conf"],
+#  }
 
   file { "${pure_postgres::params::pg_etc_dir}/conf.d/defaults.conf":
     ensure  => 'present',
@@ -62,7 +62,9 @@ class pure_postgres::initdb
   }
 
   file { "${pure_postgres::pg_data_dir}/postgresql.conf":
-    ensure => 'absent',
+    ensure  => 'absent',
+    require => Package[$pure_postgres::params::pg_package_name],
+    before  => Class['pure_postgres::start'],
   }
 
 }
