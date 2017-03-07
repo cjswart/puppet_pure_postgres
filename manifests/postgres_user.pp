@@ -28,8 +28,8 @@ class pure_postgres::postgres_user
 
   exec { 'Generate ssh keys for postgres user':
     user    => $pure_postgres::params::postgres_user,
-    command => '/usr/bin/ssh-keygen -t rsa -P "" -f ~/.ssh/id_rsa',
-    creates => "/home/${pure_postgres::params::postgres_user}/.ssh/id_rsa",
+    command => '/usr/bin/ssh-keygen -t ed25519 -P "" -f ~/.ssh/id_ed25519',
+    creates => "/home/${pure_postgres::params::postgres_user}/.ssh/id_ed25519",
     cwd     => "/home/${pure_postgres::params::postgres_user}",
   }
 
