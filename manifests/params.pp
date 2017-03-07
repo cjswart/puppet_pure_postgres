@@ -29,6 +29,12 @@ class pure_postgres::params
 
   $postgres_user        = 'postgres'
   $postgres_group       = 'postgres'
+  $do_ssl               = true
+  $pg_ssl_cn            = $fqdn
+  $pg_ssl_org           = '.'
+  $pg_ssl_country       = 'NL'
+  $pg_ssl_state         = '.'
+  $pg_ssl_locality      = '.'
 
 }
 

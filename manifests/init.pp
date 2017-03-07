@@ -11,6 +11,8 @@ class pure_postgres
   $pg_encoding       = $pure_postgres::params::pg_encoding,
   $pg_data_dir       = $pure_postgres::params::pg_data_dir,
   $pg_xlog_dir       = $pure_postgres::params::pg_xlog_dir,
+  $do_ssl            = $pure_postgres::params::do_ssl,
+  $pg_ssl_cn         = $pure_postgres::params::pg_ssl_cn,
 ) inherits pure_postgres::params
 {
 

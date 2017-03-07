@@ -3,7 +3,7 @@
 # Configs postgres after being installed from pure repo
 class pure_postgres::config
 (
-  $do_initdb         = $pure_postgres::do_initdb,
+  $do_initdb = $pure_postgres::do_initdb,
 ) inherits pure_postgres
 {
 
@@ -13,6 +13,15 @@ class pure_postgres::config
     group   => $pure_postgres::params::postgres_group,
     mode    => '0750',
     source  => 'puppet:///modules/pure_postgres/pg_hba.py',
+    require => Package[$pure_postgres::params::pg_package_name],
+  }
+
+  file { "${pure_postgres::params::pg_bin_dir}/generate_server_cert.sh":
+    ensure  => 'present',
+    owner   => $pure_postgres::params::postgres_user,
+    group   => $pure_postgres::params::postgres_group,
+    mode    => '0750',
+    content => epp('pure_postgres/generate_server_cert'),
     require => Package[$pure_postgres::params::pg_package_name],
   }
 

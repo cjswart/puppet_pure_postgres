@@ -27,6 +27,12 @@ class pure_postgres::initdb
     cwd     => $pure_postgres::params::pg_bin_dir,
   }
 
+  if $pure_postgres::do_ssl {
+    class{ 'pure_postgres::ssl':
+      require => Exec["initdb ${pure_postgres::pg_data_dir}"],
+    }
+  }
+
   file { "${pure_postgres::pg_data_dir}/pg_hba.conf":
     ensure  => 'absent',
     require => Exec["move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf"],

@@ -1,0 +1,76 @@
+#!/bin/bash
+set -e
+
+function usage()
+{
+  exitcode=${2:-0}
+
+  cat << EOF
+  usage: $0 options
+
+  You can use this script to generate a new self signed server certificate for a postgres cluster.
+
+  OPTIONS:
+     -h            Shows this help screen
+     -data         location of postgres data directory
+     -cn           the common name                     (default: hostname -f)
+     -org          the organisation name               (default: blank)
+     -country      the country the customer resides in (default: last part of hostname -d > uppercase)
+     -state        the state the customer resides in   (default: blank)
+     -locality     the locality of the customer        (default: blank)
+
+     -x            debug mode                          (default: off)
+
+EOF
+  if [ "$1" ]; then
+    echo -e "$1" | sed 's/^/  /'
+    [ $exitcode -eq 0 ] && exitcode=-1
+  fi
+  exit $exitcode
+}
+
+[ "${PGDATA}" ] || PGDATA="/var/pgpure/postgres/<%= $pure_postgres::pg_version %>/data"
+if [ ! -e "${PGDATA}" ]; then
+  echo "${PGDATA} doesn't exist"
+  exit 0
+elif [ -f "${PGDATA}/server.crt" ]; then
+  echo "${PGDATA}/server.crt already exists"
+  exit 0
+fi
+
+RANDPASS=$(</dev/urandom tr -dc A-Za-z0-9 | head -c32)
+FQDN=$(hostname -f)
+COUNTRY=$(echo $FQDN | sed 's/.*\.//' | tr [:lower:] [:upper:])
+STATE=.
+LOCALITY=.
+ORG=.
+
+while [ -n "$1" ]; do
+case $1 in
+  -h)        usage                        ;;
+  -data)     export PGDATA=$2  ; shift 2 ;;
+  -cn)       export CN=$2       ; shift 2 ;;
+  -country)  export COUNTRY=$2  ; shift 2 ;;
+  -state)    export STATE=$2    ; shift 2 ;;
+  -locality) export LOCALITY=$2 ; shift 2 ;;
+  -org)      export ORG=$2      ; shift 2 ;;
+
+  -x)        set -vx            ; shift 1 ;;
+  -*)        usage "Unknown option $1"    ;;
+  *)         usage "Argument $1 specified without an option name" ;;
+esac
+done
+
+COUNTRY=$(echo $COUNTRY | tr [:lower:] [:upper:])
+COUNTRY=${COUNTRY:0:2}
+
+TMPDIR=$(mktemp -d)
+cd $TMPDIR
+
+openssl req -new -text -out server.req -passout pass:$RANDPASS -subj "/C=$COUNTRY/ST=$STATE/L=$LOCALITY/O=$ORG/CN=$FQDN"
+openssl rsa -in privkey.pem -out "${PGDATA}/server.key" -passin pass:$RANDPASS
+rm privkey.pem
+openssl req -x509 -in server.req -text -key "${PGDATA}/server.key" -out "${PGDATA}/server.crt"
+chmod og-rwx "${PGDATA}/server.key"
+cd /tmp
+rm -r $TMPDIR
