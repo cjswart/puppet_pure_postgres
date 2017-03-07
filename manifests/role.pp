@@ -11,7 +11,17 @@ define pure_postgres::role
 )
 {
 
+  if $name !~ /(?im-x:^[a-z_][a-z_0-9$]*$)/ {
+    fail("Not a valid name for a postgres role: ${name}.")
+  }
+
+#SQL identifiers and key words must begin with a letter (a-z, but also letters with diacritical marks and non-Latin letters) or an underscore (_). Subsequent characters in an identifier or key word can be letters, underscores, digits (0-9), or dollar signs ($). Note that dollar signs are not allowed in identifiers according to the letter of the SQL standard, so their use might render applications less portable. The SQL standard will not define a key word that contains digits or starts or ends with an underscore, so identifiers of this form are safe against possible conflict with future extensions of the standard.
+
+
   if $password_hash {
+    if $password_hash !~ /md5[0-9a-f]{32}/ {
+      fail("You can only use a md5 hashed password for pure_postgres::role(${name}). ")
+    }
     $pwsql = "password '${password_hash}' LOGIN"
   } else {
     $pwsql = ''
@@ -22,13 +32,15 @@ define pure_postgres::role
     }
   }
 
-
   if $searchpath {
     $searchpath_str = join($searchpath, ',')
+    if $searchpath_str =~ /(?im-x:^[ a-z0-9$,"]*$)/ {
+      fail("Your searchpath (${searchpath_str}) should only contain the following characters: [ a-z0-9$,\",]. ")
+    }
     $sql_searchpath = "ALTER ROLE ${name} SET search_path TO ${searchpath_str};"
   }
   else {
-    $sql_searchpath2 = ''
+    $sql_searchpath = ''
   }
 
   pure_postgres::run_sql { "create role ${name}":
