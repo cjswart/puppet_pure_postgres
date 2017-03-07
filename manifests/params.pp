@@ -13,6 +13,7 @@ class pure_postgres::params
   }
 
   $pg_package_name      = "postgres-${pg_version}"
+  $pg_package_libs_name = "${pg_package_name}-libs"
   $pg_etc_dir           = "/etc/pgpure/postgres/${pg_version}/data"
   $pg_data_dir          = "/var/pgpure/postgres/${pg_version}/data"
   $pg_xlog_dir          = "${pg_data_dir}/pg_xlog"
