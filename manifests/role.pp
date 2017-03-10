@@ -8,6 +8,7 @@ define pure_postgres::role
   $superuser     = false,
   $searchpath    = undef,
   $replication   = false,
+  $canlogin      = false,
 )
 {
 
@@ -67,6 +68,13 @@ define pure_postgres::role
     pure_postgres::run_sql { "role ${name} with replication":
       sql    => "ALTER ROLE ${name} REPLICATION;",
       unless => "SELECT * FROM pg_roles where rolname = '${name}' and rolreplication;",
+    }
+  }
+
+  if $canlogin {
+    pure_postgres::run_sql { "role ${name} with login":
+      sql    => "ALTER ROLE ${name} LOGIN;",
+      unless => "SELECT * FROM pg_roles where rolname = '${name}' and rolcanlogin;",
     }
   }
 
