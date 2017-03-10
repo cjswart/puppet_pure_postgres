@@ -27,6 +27,35 @@ class pure_postgres::initdb
     cwd     => $pure_postgres::params::pg_bin_dir,
   }
 
+  pure_postgres::pg_hba {"pg_hba entry for local":
+    connection_type => 'local',
+    database        => 'all',
+    user            => 'all',
+    method          => 'peer',
+    state           => 'present',
+    require => Exec["move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf"],
+  }
+
+  pure_postgres::pg_hba {"pg_hba entry for localhost":
+    connection_type => 'host',
+    database        => 'all',
+    user            => 'all',
+    method          => 'md5',
+    state           => 'present',
+    source          => '127.0.0.1/32',
+    require => Exec["move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf"],
+  }
+
+  pure_postgres::pg_hba {"pg_hba entry for localhost IPv6":
+    connection_type => 'host',
+    database        => 'all',
+    user            => 'all',
+    method          => 'md5',
+    state           => 'present',
+    source          => '::1/128',
+    require => Exec["move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf"],
+  }
+
   if $pure_postgres::do_ssl {
     class{ 'pure_postgres::ssl':
       require => Exec["initdb ${pure_postgres::pg_data_dir}"],
