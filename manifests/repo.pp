@@ -3,13 +3,12 @@
 # Installs pure repo
 class pure_postgres::repo
 (
-  $repo              = $pure_postgres::params::repo,
-  $version           = $pure_postgres::params::version,
-  $repo_package_name = $pure_postgres::params::repo_package_name,
-  $package_version   = $pure_postgres::params::package_version,
+  $repo                 = $pure_postgres::params::repo,
+  $version              = $pure_postgres::params::version,
+  $repo_package         = $pure_postgres::params::repo_package,
 ) inherits pure_postgres::params
 {
-  $dist              = $::operatingsystem ?
+  $dist = $::operatingsystem ?
   {
     'Centos' => 'centos'
   }
