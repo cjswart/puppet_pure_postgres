@@ -5,7 +5,7 @@ class pure_postgres
 (
   $repo            = $pure_postgres::params::repo,
   $version         = $pure_postgres::params::version,
-  $repo_package    = $pure_postgres::params::repo_package_name,
+  $repo_package    = $pure_postgres::params::repo_package,
   $do_initdb       = $pure_postgres::params::do_initdb,
   $pg_encoding     = $pure_postgres::params::pg_encoding,
   $pg_data_dir     = $pure_postgres::params::pg_data_dir,
