@@ -11,9 +11,9 @@ class pure_postgres::params
     '4' => '9.6',
   }
 
-  $pg_package_name    = "postgres-${pg_version}"
-  $pg_package_libs    = "${pg_package_name}-libs"
-  $pg_package_contrib = "${pg_package_name}-contrib"
+  $pg_package         = "postgres-${pg_version}"
+  $pg_package_libs    = "${pg_package}-libs"
+  $pg_package_contrib = "${pg_package}-contrib"
   $pg_etc_dir         = "/etc/pgpure/postgres/${pg_version}/data"
   $pg_data_dir        = "/var/pgpure/postgres/${pg_version}/data"
   $pg_xlog_dir        = "${pg_data_dir}/pg_xlog"
@@ -30,7 +30,7 @@ class pure_postgres::params
   $postgres_user      = 'postgres'
   $postgres_group     = 'postgres'
   $do_ssl             = true
-  $pg_ssl_cn          = $fqdn
+  $pg_ssl_cn          = $::fqdn
   $pg_ssl_org         = '.'
   $pg_ssl_country     = 'NL'
   $pg_ssl_state       = '.'

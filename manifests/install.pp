@@ -56,7 +56,7 @@ class pure_postgres::install
     }
   }
 
-  package {$pure_postgres::params::pg_package_name:
+  package {$pure_postgres::params::pg_package:
     ensure  => 'installed',
     require => File[ $pure_postgres::params::pg_data_dir ],
   }

@@ -13,7 +13,7 @@ class pure_postgres::config
     group   => $pure_postgres::params::postgres_group,
     mode    => '0750',
     source  => 'puppet:///modules/pure_postgres/pg_hba.py',
-    require => Package[$pure_postgres::params::pg_package_name],
+    require => Package[$pure_postgres::params::pg_package],
   }
 
   file { "${pure_postgres::params::pg_bin_dir}/generate_server_cert.sh":
@@ -22,7 +22,7 @@ class pure_postgres::config
     group   => $pure_postgres::params::postgres_group,
     mode    => '0750',
     content => epp('pure_postgres/generate_server_cert'),
-    require => Package[$pure_postgres::params::pg_package_name],
+    require => Package[$pure_postgres::params::pg_package],
   }
 
   # create config directory
@@ -31,7 +31,7 @@ class pure_postgres::config
     owner   => $pure_postgres::params::postgres_user,
     group   => $pure_postgres::params::postgres_group,
     mode    => '0750',
-    require => Package[$pure_postgres::params::pg_package_name],
+    require => Package[$pure_postgres::params::pg_package],
   }
 
   if $do_initdb {
@@ -45,7 +45,7 @@ class pure_postgres::config
     mode      => '0640',
     source    => 'puppet:///modules/pure_postgres/postgresql.conf',
     show_diff => false,
-    require   => Package[$pure_postgres::params::pg_package_name],
+    require   => Package[$pure_postgres::params::pg_package],
     notify    => Class['pure_postgres::start'],
   }
 

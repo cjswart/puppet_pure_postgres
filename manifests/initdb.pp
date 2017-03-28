@@ -6,7 +6,8 @@ class pure_postgres::initdb
 ) inherits pure_postgres
 {
 
-  $initcmd = shellquote("${pure_postgres::params::pg_bin_dir}/initdb", '-D', $pure_postgres::params::pg_data_dir, '-E', $pure_postgres::pg_encoding )
+  $initcmd = shellquote("${pure_postgres::params::pg_bin_dir}/initdb", '-D', $pure_postgres::params::pg_data_dir,
+                        '-E', $pure_postgres::pg_encoding )
 
   if $pure_postgres::pg_xlog_dir != "${pure_postgres::params::pg_data_dir}/pg_xlog" {
     $xlogcmd = shellquote( '-X', $pure_postgres::pg_xlog_dir )
@@ -17,7 +18,7 @@ class pure_postgres::initdb
     command => "${initcmd} ${xlogcmd}",
     creates => "${pure_postgres::pg_data_dir}/PG_VERSION",
     cwd     => $pure_postgres::params::pg_bin_dir,
-    require => [ Package[$pure_postgres::params::pg_package_name], File[$pure_postgres::pg_xlog_dir], File[$pure_postgres::pg_data_dir] ],
+    require => [ Package[$pure_postgres::params::pg_package], File[$pure_postgres::pg_xlog_dir], File[$pure_postgres::pg_data_dir] ],
   } ->
 
   exec { "move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf":
@@ -27,33 +28,33 @@ class pure_postgres::initdb
     cwd     => $pure_postgres::params::pg_bin_dir,
   }
 
-  pure_postgres::pg_hba {"pg_hba entry for local":
+  pure_postgres::pg_hba {'pg_hba entry for local':
     connection_type => 'local',
     database        => 'all',
     user            => 'all',
     method          => 'peer',
     state           => 'present',
-    require => Exec["move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf"],
+    require         => Exec["move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf"],
   }
 
-  pure_postgres::pg_hba {"pg_hba entry for localhost":
+  pure_postgres::pg_hba {'pg_hba entry for localhost':
     connection_type => 'host',
     database        => 'all',
     user            => 'all',
     method          => 'md5',
     state           => 'present',
     source          => '127.0.0.1/32',
-    require => Exec["move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf"],
+    require         => Exec["move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf"],
   }
 
-  pure_postgres::pg_hba {"pg_hba entry for localhost IPv6":
+  pure_postgres::pg_hba {'pg_hba entry for localhost IPv6':
     connection_type => 'host',
     database        => 'all',
     user            => 'all',
     method          => 'md5',
     state           => 'present',
     source          => '::1/128',
-    require => Exec["move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf"],
+    require         => Exec["move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf"],
   }
 
   if $pure_postgres::do_ssl {
@@ -98,7 +99,7 @@ class pure_postgres::initdb
 
   file { "${pure_postgres::pg_data_dir}/postgresql.conf":
     ensure  => 'absent',
-    require => Package[$pure_postgres::params::pg_package_name],
+    require => Package[$pure_postgres::params::pg_package],
     before  => Class['pure_postgres::start'],
   }
 

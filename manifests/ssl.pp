@@ -11,7 +11,8 @@ class pure_postgres::ssl
   $locality  = $pure_postgres::params::pg_ssl_locality,
 )
 {
-  $cmd = shellquote( "${pure_postgres::pg_bin_dir}/generate_server_cert.sh", '-data', $data, '-cn', $cn, '-org', $org, '-country', $country, '-state', $state, '-locality', $locality )
+  $cmd = shellquote( "${pure_postgres::pg_bin_dir}/generate_server_cert.sh", '-data', $data, '-cn', $cn, '-org', $org,
+                      '-country', $country, '-state', $state, '-locality', $locality )
 
   exec { "exec ${cmd}":
     user    => $pure_postgres::postgres_user,

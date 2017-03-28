@@ -10,7 +10,8 @@ define pure_postgres::grant (
 )
 {
 
-  if ! ($permission.downcase in ['execute', 'select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger', 'usage', 'connect', 'temporary', 'temp', 'all privilleges', 'all', 'create']) {
+  if ! ($permission.downcase in [ 'execute', 'select', 'insert', 'update', 'delete', 'truncate', 'references', 'trigger', 'usage',
+                                  'connect', 'temporary', 'temp', 'all privilleges', 'all', 'create']) {
     fail("Not a valid permission ${permission} on ${object} for ${role}.")
   }
 
@@ -22,7 +23,10 @@ define pure_postgres::grant (
     'foreign data wrapper'    => "select 'yes' where has_foreign_data_wrapper_privilege('${role}', '${object}', '${permission}')",
     'foreign server'          => "select 'yes' where has_server_privilege('${role}', '${object}', '${permission}')",
     'function'                => "select 'yes' where has_function_privilege('${role}', '${object}', '${permission}')",
-    'all functions in schema' => "select func from (select specific_schema||'.'||specific_name||'()' func from information_schema.routines where routine_type = 'FUNCTION' and specific_schema='${object}') tmp where not has_function_privilege('${role}', '${object}', '${permission}')",
+    'all functions in schema' => "select func from (
+                                     select specific_schema||'.'||specific_name||'()' func from information_schema.routines 
+                                     where routine_type = 'FUNCTION' and specific_schema='${object}') tmp 
+                                  where not has_function_privilege('${role}', '${object}', '${permission}')",
     'language'                => "select 'yes' where has_language_privilege('${role}', '${object}', '${permission}')",
     'schema'                  => "select 'yes' where has_schema_privilege('${role}', '${object}', '${permission}')",
     'tablespace'              => "select 'yes' where has_tablespace_privilege('${role}', '${object}', '${permission}')",
@@ -48,11 +52,11 @@ define pure_postgres::grant (
   }
   else {
     $sql_grant = ''
-  } 
+  }
 
   $sql    = "grant ${permission} ${sql_grant}on ${object_type} ${object} to ${role};"
 
-  pure_postgres::run_sql { "$db: $sql":
+  pure_postgres::run_sql { "${db}: ${sql}":
     sql    => $sql,
     unless => $unless,
     db     => $db,
