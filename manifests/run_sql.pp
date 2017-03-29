@@ -2,7 +2,7 @@
 define pure_postgres::run_sql (
   $sql,
   $unless = undef,
-  $user   = $pure_postgres::params::pg_user,
+  $user   = $pure_postgres::params::postgres_user,
   $db     = 'postgres',
 )
 {
