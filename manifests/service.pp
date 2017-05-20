@@ -4,26 +4,32 @@
 
 class pure_postgres::service
 (
-  $service_ensure  = undef,
-) inherits pure_postgres
+)
 {
 
-  $action  = $service_ensure ? {
-    'running'   => 'start',
-    'stopped'   => 'stop',
-    'restarted' => 'restart',
-    'reloaded' =>  'reload',
-    'started and reloaded' =>  'startreload',
-    default  => '',
+  #this also contains pure_postgres::start and pure_postgres::stop
+  if ! defined(Class['pure_postgres::restart']) {
+    class { 'pure_postgres::restart':
+      refreshonly => true,
+    }
   }
 
-  if $action == ''{
-    fail('service_ensure parameter must be running, stopped, restarted, reloaded or started and reloaded')
+  if ! defined(Class['pure_postgres::reload']) {
+    class { 'pure_postgres::reload':
+      refreshonly => true,
+    }
   }
 
-  # Do what is needed for postgresql service.
-  class {"pure_postgres::${action}":
+  if ! defined(Class['pure_postgres::started']) {
+    class { 'pure_postgres::started':
+      refreshonly => true,
+    }
   }
+
+  Class['pure_postgres::stop'] -> Class['pure_postgres::start']
+  Class['pure_postgres::start'] ~> Class['pure_postgres::started']
+  Class['pure_postgres::started'] -> Class['pure_postgres::reload']
+  Class['pure_postgres::stop'] -> Class['pure_postgres::start']
 
 }
 

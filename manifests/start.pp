@@ -17,10 +17,7 @@ class pure_postgres::start
     onlyif      => "test -f '${pure_postgres::params::pg_data_dir}/PG_VERSION'",
     path        => "${pure_postgres::params::pg_bin_dir}:/usr/local/bin:/bin",
     cwd         => $pure_postgres::params::pg_bin_dir,
-  } ~>
-
-  class { 'pure_postgres::started':
-    refreshonly => true,
   }
+
 }
 

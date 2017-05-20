@@ -15,6 +15,8 @@ class pure_postgres
 ) inherits pure_postgres::params
 {
 
+  include pure_postgres::service
+
   class { 'pure_postgres::install':
   } ->
 

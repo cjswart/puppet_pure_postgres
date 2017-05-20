@@ -21,6 +21,7 @@ class pure_postgres::started
     path        => "${pure_postgres::params::pg_bin_dir}:/usr/local/bin:/bin",
     cwd         => $pure_postgres::params::pg_bin_dir,
     loglevel    => 'debug',
+    require     => Class['pure_postgres::start'],
   }
 
 }
