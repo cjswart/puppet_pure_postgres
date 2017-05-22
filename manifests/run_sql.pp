@@ -29,4 +29,6 @@ define pure_postgres::run_sql (
     cwd     => $pure_postgres::params::pg_bin_dir,
   }
 
+  Pure_postgres::Started['postgres started'] -> Exec["psql ${sql} in ${db}"]
+
 }

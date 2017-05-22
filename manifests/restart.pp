@@ -8,18 +8,17 @@ class pure_postgres::restart
 )
 {
 
-  if ! defined(Class['pure_postgres::stop']) {
-    class {'pure_postgres::stop':
-      refreshonly => $refreshonly,
-    }
+  # Restart postgresql service.
+  exec { 'service postgres restart':
+    refreshonly => $refreshonly,
+    user        => $pure_postgres::params::postgres_user,
+    command     => '/etc/init.d/postgres restart',
+    onlyif      => "test -f '${pure_postgres::params::pg_data_dir}/PG_VERSION'",
+    path        => "${pure_postgres::params::pg_bin_dir}:/usr/local/bin:/bin",
+    cwd         => $pure_postgres::params::pg_bin_dir,
+  } ->
+
+  pure_postgres::started { 'postgres restarted':
   }
 
-  if ! defined(Class['pure_postgres::start']) {
-    class {'pure_postgres::start':
-      refreshonly => $refreshonly,
-    }
-  }
-
-  Class['pure_postgres::stop'] ~>  Class['pure_postgres::start']
 }
-
