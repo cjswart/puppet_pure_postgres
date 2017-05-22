@@ -4,7 +4,7 @@
 
 class pure_postgres::restart
 (
-  $refreshonly = false,
+  $refreshonly = true,
 )
 {
 
