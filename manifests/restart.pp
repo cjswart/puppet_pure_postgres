@@ -4,13 +4,12 @@
 
 class pure_postgres::restart
 (
-  $refreshonly = true,
 )
 {
 
   # Restart postgresql service.
   exec { 'service postgres restart':
-    refreshonly => $refreshonly,
+    refreshonly => true,
     user        => $pure_postgres::params::postgres_user,
     command     => '/etc/init.d/postgres restart',
     onlyif      => "test -f '${pure_postgres::params::pg_data_dir}/PG_VERSION'",
