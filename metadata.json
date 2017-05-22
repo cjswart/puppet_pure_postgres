@@ -4,9 +4,9 @@
       "author": "Joint venture of KPN and Splendid Data",
       "license": "GPLv3.0",
       "summary": "A module for deploying a postgres database server with packages from PostgresPure distribution",
-      "source": "https://github.com/sebasmannem/puppet_pure_postgres/",
-      "project_page": "https://github.com/sebasmannem/puppet_pure_postgres/",
-      "issues_url": "https://github.com/sebasmannem/puppet_pure_postgres/issues",
+      "source": "https://github.com/splendiddata/puppet_pure_postgres/",
+      "project_page": "https://github.com/splendiddata/puppet_pure_postgres/",
+      "issues_url": "https://github.com/splendiddata/puppet_pure_postgres/issues",
       "tags": ["postgres", "postgrespure"],
       "operatingsystem_support": [
         {
