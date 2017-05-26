@@ -49,5 +49,15 @@ class pure_postgres::config
     notify    => Class['pure_postgres::start'],
   }
 
+  file { "${pure_postgres::params::pg_etc_dir}/conf.d/autotune.conf":
+    ensure    => 'present',
+    owner     => $pure_postgres::params::postgres_user,
+    group     => $pure_postgres::params::postgres_group,
+    mode      => '0640',
+    content   => epp('pure_postgres/autotune.epp'),
+    show_diff => false,
+    notify    => Class['pure_postgres::restart'],
+  }
+
 }
 

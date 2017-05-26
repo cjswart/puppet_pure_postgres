@@ -37,5 +37,6 @@ class pure_postgres::params
   $pg_ssl_locality    = '.'
 
   $manage_service     = true
+  $autorestart        = true
 }
 

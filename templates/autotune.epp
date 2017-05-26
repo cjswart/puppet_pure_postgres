@@ -1,0 +1,26 @@
+#This file is managed by puppet according to system memory.
+#If you need to change these setting, please override these defaults in a file called manual_override.conf in the same location.
+
+#Sets the amount of memory the database server uses for shared memory buffers.
+#Recommended starting is 25% of system memory.
+shared_buffers = <%= $facts[memory][system][total_bytes] / 4096 %>kB
+
+#effective_cache_size should be set to an estimate of how much memory is available for disk caching
+#by the operating system and within the database itself.
+#This value is used only by the PostgreSQL query planner to figure out whether plans it's considering would be expected to fit in RAM or not.
+#effective_cache_size = 80% of server memory in kb
+effective_cache_size = <%= $facts[memory][system][total_bytes] / 1280  %>kB
+
+#Work mem limits the amount of memory used for sorts by a server proces (handling a client connection).
+#Users can have multiple connections, running multiple queries and every query can do multiple sorts.
+#work_mem = <server mem / max num connections> is assumed and <max num connections = 100 is assumed.
+#Override both of these in manual_override.conf if required.
+work_mem = <%= $facts[memory][system][total_bytes] / 102400 %>kB
+
+#Maintenance work mem limits the amount of memory used for sorts by a maintenance proces.
+#maintenance_work_mem = 10% of server memory in kb
+maintenance_work_mem = <%= $facts[memory][system][total_bytes] / 10240  %>kB
+
+#Autovacuum work mem limits the amount of memory used for sorts by an autovacuum proces.
+#autovacuum_work_mem = 10% of server memory in kb
+autovacuum_work_mem = <%= $facts[memory][system][total_bytes] / 10240  %>kB

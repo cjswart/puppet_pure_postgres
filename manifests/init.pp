@@ -13,6 +13,7 @@ class pure_postgres
   $do_ssl         = $pure_postgres::params::do_ssl,
   $pg_ssl_cn      = $pure_postgres::params::pg_ssl_cn,
   $manage_service = $pure_postgres::params::manage_service, 
+  $autorestart    = $pure_postgres::params::autorestart,
 ) inherits pure_postgres::params
 {
 
