@@ -29,8 +29,10 @@ class pure_postgres::ssh
     }
   }
 
-  $tags.each | String $tag | {  
-    Sshkey <<| tag == $tag |>>
+  $tags.each | $tag | {
+    if $tag!=undef {
+      Sshkey <<| tag == $tag |>>
+    }
   }
 }
 
