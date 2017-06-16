@@ -7,6 +7,25 @@ class pure_postgres::config
 ) inherits pure_postgres
 {
 
+  if ! defined(File['/etc/facter/facts.d']) {
+    file { [  '/etc/facter', '/etc/facter/facts.d' ]:
+      ensure => 'directory',
+      owner  => 'root',
+      group  => 'root',
+      mode   => '0755',
+    }
+  }
+
+  #create facts script to add postgres ssh keys to facts
+  file { '/etc/facter/facts.d/pure_postgres_facts.sh':
+    ensure  => file,
+    content => epp('pure_postgres/pure_postgres_facts.epp'),
+    owner   => 'root',
+    group   => 'root',
+    mode    => '0755',
+    require => File['/etc/facter/facts.d'],
+  } 
+
   file { "${pure_postgres::params::pg_bin_dir}/modify_pg_hba.py":
     ensure  => 'present',
     owner   => $pure_postgres::params::postgres_user,
