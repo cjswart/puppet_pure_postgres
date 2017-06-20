@@ -1,0 +1,56 @@
+1.0.2: Autotune, autorestart and undef pure_repmgr::barman_server issue
+- Autotune feature added
+- Autorestart can now be enabled / disabled
+- Fixed issue when pure_repmgr::barman_server is undef.
+
+1.0.1: Added barman support and modified postgres service to better fit to puppet way
+- Changes as where required for barman setup:
+  - added pure_postgres::ssh module which exchanges ssh keys between servers.
+    This was part of pure_repmgr::ssh, but that was split and this part was transferred and enhanced so
+    that keys can also be exchanged between barman server and postgres database servers.
+- The service part is modified to better fit the puppet way of resource management.
+  - A init parameter sets if the service should be managed by the module or not.
+    -  Managed: pure_postgres starts the service
+    -  Unmanaged: pure_postgres::start can be notified, but will not be started by default
+  - pure_postgres::started is now a definition. Both pure_postgres::start and pure_postgres::restart use it to check that postgres is up after class is finished
+  - pure_postgres::reload and pure_postgres::restart are refreshonly
+  - All the service stuff is moved to the pure_postgres::service module (to fit to proper module layout)
+    pure_postgres::service now rather initializes the services that taking action
+
+1.0.0: Final release of Phase 1
+- Also added revoke functionality.
+
+0.9.5: Systemd unit file for postgres
+- Added a systemctl script that aids in many thing. But its not yet implemented...
+
+0.9.3: lint and fixed repo_package_name issue
+- Code cleanup with lint
+- Fixed repo package name
+- Bumped version in metadata.json file.
+
+0.9.2: Added metadata.json and README.md
+- Added a metadata.json file.
+
+0.9.1: RTM
+- This release should hold all for going live in phase 1
+
+0.9: Many security enhancements
+- Security:
+  - local connections should be peer or md5
+- Enhancements:
+  - canlogin option to pure_postgres::role
+
+0.1.7: Many security enhancements
+- Generating and configuring SSL Certificate
+- Fixed risk for SQL injection
+- Use ed25519 instead of rsa
+- Log connects and disconnects to postgresql.log
+
+0.1.5: Getting there
+- Initial master does not rely on package for datadir initialization anymore, 
+  but starts out similar as initial standby and does an extra initdb.
+- Both initial master and initial standby can be used with different location for data / pg_xlog. 
+  Both are resolved with symlinks.
+- Fixed a great lot of puppet-lint warnings and errors
+- both start and reload are now optionally refreshonly. 
+  Moved 'check postgres was started' from start class to new started class.

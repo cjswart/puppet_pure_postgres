@@ -7,6 +7,14 @@ class pure_postgres::config
 ) inherits pure_postgres
 {
 
+  file { "${pure_postgres::pg_bin_dir}/pure_postgres_releasenotes.txt":
+    ensure  => 'file',
+    source => 'puppet:///modules/pure_postgres/releasenotes.txt',
+    owner   => $pure_postgres::postgres_user,
+    group   => $pure_postgres::postgres_group,
+    mode    => '0750',
+  }
+
   if ! defined(File['/etc/facter/facts.d']) {
     file { [  '/etc/facter', '/etc/facter/facts.d' ]:
       ensure => 'directory',
