@@ -36,9 +36,9 @@ class pure_postgres::initdb
     creates => "${pure_postgres::pg_data_dir}/PG_VERSION",
     cwd     => $pure_postgres::params::pg_bin_dir,
     require => [ Package[$pure_postgres::params::pg_package], File[$pure_postgres::pg_xlog_dir], File[$pure_postgres::pg_data_dir] ],
-  } ->
+  }
 
-  exec { "move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf":
+  -> exec { "move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf":
     user    => $pure_postgres::params::postgres_user,
     command => "/bin/mv '${pure_postgres::pg_data_dir}/pg_hba.conf' ${pure_postgres::params::pg_etc_dir}/pg_hba.conf",
     unless  => "/bin/test -s '${pure_postgres::params::pg_etc_dir}/pg_hba.conf'",

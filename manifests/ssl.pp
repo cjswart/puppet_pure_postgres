@@ -36,9 +36,9 @@ class pure_postgres::ssl
     command => $cmd,
     require => File["${pure_postgres::params::pg_bin_dir}/generate_server_cert.sh"],
     creates => "${pure_postgres::pg_data_dir}/server.crt",
-  } ->
+  }
 
-  file { "${pure_postgres::params::pg_etc_dir}/conf.d/ssl.conf":
+  -> file { "${pure_postgres::params::pg_etc_dir}/conf.d/ssl.conf":
     ensure  => 'present',
     owner   => $pure_postgres::params::postgres_user,
     group   => $pure_postgres::params::postgres_group,

@@ -25,11 +25,11 @@ class pure_postgres::config
 {
 
   file { "${pure_postgres::pg_bin_dir}/pure_postgres_releasenotes.txt":
-    ensure  => 'file',
+    ensure => 'file',
     source => 'puppet:///modules/pure_postgres/releasenotes.txt',
-    owner   => $pure_postgres::postgres_user,
-    group   => $pure_postgres::postgres_group,
-    mode    => '0750',
+    owner  => $pure_postgres::postgres_user,
+    group  => $pure_postgres::postgres_group,
+    mode   => '0750',
   }
 
   if ! defined(File['/etc/facter/facts.d']) {
@@ -49,7 +49,7 @@ class pure_postgres::config
     group   => 'root',
     mode    => '0755',
     require => File['/etc/facter/facts.d'],
-  } 
+  }
 
   file { "${pure_postgres::params::pg_bin_dir}/modify_pg_hba.py":
     ensure  => 'present',
