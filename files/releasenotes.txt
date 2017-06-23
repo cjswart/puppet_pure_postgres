@@ -1,3 +1,10 @@
+1.1.0: Cleanup, release notes, commenting, and copyrights
+- Cleanup with puppet lint
+- Added a line to some files and templates stating that the file is managed by puppet
+- Added a copyright statement to manifests, files and templates
+- Added release notes. They are shipped by puppet to the node
+  so that operators know which version of puppet module is currently managing this node.
+
 1.0.2: Autotune, autorestart and undef pure_repmgr::barman_server issue
 - Autotune feature added
 - Autorestart can now be enabled / disabled
