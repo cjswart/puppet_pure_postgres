@@ -29,30 +29,42 @@ import shutil
 import subprocess
 import sys
 
+'''
+This exception is raised when the touch function fails.
+'''
 class TouchError(Exception):
     pass
 
+'''
+This function creates an empty file with proper ownership and permissions if it doesn't already exist.
+'''
 def touch(path, owner, group, mode):
     try:
+        #If it exists, then exit this function
         fstat = os.stat(path)
         return
     except:
         pass
     try:
+        #create a file by opening and closing it
         f=open(path, 'w')
         f.close()
         fstat = os.stat(path)
     except:
         raise TouchError('Could not create file {0}. Please become a user with sufficient permissions.'.format(path))
     try:
+        #get user info, like uid
         usr = pwd.getpwnam(owner)
     except:
         raise TouchError('User {0} is unknown on this system. Please specify a valid owner for the file.'.format(owner))
     try:
+        #get group info like gid
         group = grp.getgrnam(group)
     except:
         raise TouchError('Group {0} is unknown on this system. Please specify a valid owner for the file.'.format(group))
     try:
+        #convert octal string to integer
+        #Example: 644 would become 420 (6*64 + 4*8 + 4)
         mode=int(str(mode),8)
     except:
         raise TouchError("Could not convert '{0}' form octal to int. Please specify a valid mode in octal form (e.a. 777, 640, etc.).".format(mode))
@@ -60,140 +72,267 @@ def touch(path, owner, group, mode):
         raise TouchError("Please specify octal mode between 000 and 777.".format(mode))
     try:
         if stat.S_IMODE(fstat.st_mode) != mode:
+            #filemode not as it should. changing.
             os.chmod(path, mode)
         if fstat.st_uid != usr.pw_uid or fstat.st_gid != group.gr_gid:
+            #file ownership not as it should. changing.
             os.chown(path, usr.pw_uid, group.gr_gid)
     except:
         raise TouchError("Could not set owner, group or permissions on file. Please become a user with sufficient permissions.".format(mode))
 
+
+'''
+This exception is raised when issues occur with ip calculations .
+'''
 class IPError(Exception):
     pass
 
+'''
+This function converts a string containing an ip address like '192.168.0.101' to an integer like 3232235621.
+It is the inverse of int_to_ipv4().
+'''
 def ipv4_to_int(ip):
     if type(ip) is int:
+        # If IP was already an integer, then just return it unchanged
         return ip
     elif type(ip) is str:
+        #Split by '.'
         ip_ar = ip.split(".")
+        #check that there are 4 parts
         if len(ip_ar) != 4:
             raise IPError("Invalid IP: {0}. We need 4 numbers in an IP".format(ip))
+        #Start empty
         ip=0
+        #Loop through parts and
         for i in ip_ar:
             try:
+                #convert to int
                 i=int(i)
             except:
                 raise IPError("IP part {0} must be numeric".format(i))
+            #Check that it is within range
             if i<0 or i>255:
                 raise IPError("IP part {0} must be from 0-255".format(i))
+            #Scale original part up 256 times and add the new part
             ip=ip*256+i
+        #IP p1.p2.p3.p4 should now be 256**3 * p1 + 256**2 * p2 + 256 * p3 + p4.
+        #Return as result
         return ip
     else:
         raise IPError("{0} has an invalid type for an IP.".format(ip.__repr__()))
 
+'''
+This function converts an integer converted ip address like 3232235621 back into a string like '192.168.0.101'.
+It is the inverse of ipv4_to_int().
+'''
 def int_to_ipv4(i):
     try:
+        # Check that it is (or can be convert to) a basic integer
         i = int(i)
     except:
         raise IPError("{0} is not an integer.".format(i.__repr__()))
+    if i >= 2**32 or i < 0:
+        raise IPError('IP address number out of range.')
     ip = []
     for x in range(4):
-        ip.append(str(int(i/2**(8*(3-x)) % 256)))
+        #First see what the scale factor (what we should divide i by to get the part) of this part is.
+        #For part 0 (everything that should end up before the first dot) it would be 256**3
+        #For part 3 (everything that should end up after the last dot) it would be 1
+        scale = 256**(3-x)
+
+        #Then divide i by scale and trim everything larger than 256 and everything smaller than 1
+        part=int(i/scale) % 256
+
+        #Convert part to string and add to list
+        ip.append(str(part))
+
+    #By now, we have a list of parts like ['192', '168', '0', '101' ].
+    #Join the list elements to one string, seperated by dot and you get the reult, like '192.168.0.101'.
     return '.'.join(ip)
 
+'''
+This function converts a string containing a network base like '/24' to a netmask like '256.256.256.0'.
+'''
 def prefix_to_ipv4netmask(base):
     if type(base) is str:
+        #It could contain a /. If it does, remove it.
         base=base.replace('/','')
     try:
+        #convert to int
         base=int(base)
     except:
         raise IPError("invalid numeric expression for ipv4 network base {}".format(base))
-    return int_to_ipv4((2**base-1) * 2** (32-base))
 
+    #Generate the amount of ones as required (/24 would generate 16 times a 1, like 111111111111111111111111)
+    #Basically, 2**24 would be a 1 and 24 zeros. If you substract 1, you end up with 24 1's.
+    ones = 2**base-1
+
+    #After the ones, there should be a number of zeroes making a total of 32 bits.
+    #So for 24 1's there should be 8 zero's and for 16 there should be 16. This is always (32-base) zero's.
+    #For every zero, one could multiply by two, so for 8 zero's one should multiply by 2**8.
+    #And for (32-base) zero's, one can multiply with 2**(32-base)
+    multiplier = 2 ** (32-base)
+    netmask = ones * multiplier
+
+    #convert t to a ipv4 string with int_to_ipv4 and return it
+    return int_to_ipv4(netmask)
+
+'''
+This function converts a string containing an ipv6 address like 'fe80::79ee:7b70:320f:8877' 
+into an integer like 338288524927261089662804992486200543351.
+It understands (and converts) an ipv4 part in a ipv6 address, aswell as '::'
+It is the inverse of int_to_ipv6() and the ipv6 alternate to ipv4_to_int().
+'''
 def ipv6_to_int(ip):
+    # We will create a normalized version too.
+    # Better copy to new varaiable and leave the passed in unchanged,
+    # so that it is easy to compare during debug
     normalized = ip
     if '.' in normalized:
-        #Normalize: Replace ipv4 part for ipv6 equivalent
+        # If it holds a '.', it probably holds an ipv4 part.
+        # Check using re.search
         m = ipv4part_re.search(normalized)
+        #Convert ipv4 parts (dec) to ipv6 parts (hex)
         ipv6part = ''.join('%02x'%int(i) for i in m.group(0).split('.'))
+        #It is now one hex of 8 digits, while it should be two of 4. Lets insert a ':' in the middle.
         ipv6part = ipv6part[:4] + ':' + ipv6part[4:]
+        #And replace the ipv4 part in the ip by the just generated ipv6 counterpart
         normalized = normalized.replace(m.group(0), ipv6part)
     if '::' in ip:
-        #Normalize: Replace :: for correct number of 0000 parts
-        missing = 9 - normalized.count(':')
-        normalized = normalized.replace('::', ":".join(['']+['0000']*missing+['']))
+        if ':::' in ip:
+            raise IPError('::: is not valid in ipv6')
+        # It is possible that multiple parts of ':0000:' are together replaced by a single '::'.
+        # If so, we should rstore that to the ':0000:' parts
+        # First see how much are missing
+        missing = 8 - normalized.count(':')
+        # This creates a string with '0000' elements surrounded and seperated by ':', just as much as there where missing.
+        replacer = ':'+'0000:'*missing
+        # Replace the '::' by the replacer string
+        normalized = normalized.replace('::', replacer)
+        #If :: was at the beginning (or the end), the initial (or last) ':' should not be there...
         normalized.strip(':')
-        normalized = normalized.replace('::',':')
+        #normalized = normalized.replace('::',':')
+    #Now split in multiple parts
     parts = normalized.split(':')
     if len(parts) < 8:
         raise IPError('IPv6 seems to consist of too less parts')
     elif len(parts) > 8:
         raise IPError('IPv6 seems to consist of too much parts')
-    #Normalize: Every part should have 4 digits
-    for i in range(parts):
+    #Normalize: Every part should have 4 digits. If not, the join would produce the correct number.
+    for i in range(len(parts)):
         if len(parts[i]) != 4:
             part = '0000' + parts[i]
-            parts[i] = part[-4:]
-    return int(parts.replace(':',''),16)
+            part = part[-4:]
+            parts[i] = part
+    #Since it is now normalized, we can glue all together and handle this as one huge hexadecimal number
+    hex_result = ''.join(parts)
+    #convert to int with base 16 and return the result
+    return int(hex_result,16)
 
+'''
+This function converts an integer converted ip address like 338288524927261089662804992486200543351 
+back into a string containing an ipv6 address like 'fe80::79ee:7b70:320f:8877'.
+It cleans up by leading zeros and replacing multiple instances of ':0:' by '::'.
+It is the inverse of ipv6_to_int() and the ipv6 counterpart of ipv6_to_int.
+'''
 def int_to_ipv6(i):
     try:
-        rest = int(i)
+        i = int(i)
     except:
         raise IPError("{0} is not an integer.".format(i.__repr__()))
-
-    # Split into hex parts
-    ipv6 = []
-    for i in range(8):
-        part = rest % 16**4
-        rest = rest / 16**4
-        ipv6.append(str(part))
-
-    #join with ':' as seperator
-    ipv6 = ':'.join(ipv6[::-1])
-
-    #Find largest repetion of zero fields and replace by '::'
+    #convert to hex, but remove the 0x front
+    hex_i = hex(i).split('x')[-1]
+    #Add '0' to the front up until 32 characters total
+    hex_i = '0'*(32 - len(hex_i)) + hex_i
+    #split in parts of 4 characters
+    parts = [ hex_i[i:i+4] for i in range(0, 32, 4) ]
+    #Lets loop through the parts and clean those leading zero's
+    for n in range(len(parts)):
+        #Not looping though parts directly, but using n, so we now the index and can later replace more easilly.
+        #But get the part in seperate variable for easier access
+        part = parts[n]
+        #look for leading zero
+        while part[0] == '0' and part != '0':
+            #remove leading zero
+            part = part[1:]
+        #write back to parts list
+        parts[n] = part
+    #join seperated with ':'. It now looks like a valid ipv6, but some cleanup can be done.
+    ipv6 = ':'.join(parts)
+    #Find repetions of zero fields to replace by '::'
     obsoletes = [ m.group(0) for m in ipv6_obs_re.finditer(ipv6) ]
     if len(obsoletes) > 0:
+        # Find largest number of repetitions
         obsoletes = sorted(obsoletes, key=len)
         largest_obsolete = obsoletes[-1]
-        ipv6 = ipv6.replace(obsoletes, '::', 1)
-
-    #Strip leading zeros per field
-    parts = ipv6.split(':')
-    for i in range(len(parts)):
-        part = parts[i]
-        if len(part) == 0:
-            continue
-        part = part.lstrip('0')
-        if len(part) == 0:
-            part = '0'
-        parts[i] = part
-    return ':'.join(parts)
+        # Replace only the first occurrence of this repetition by '::'
+        ipv6 = ipv6.replace(largest_obsolete, '::', 1)
+    if ipv6.startswith('0::'):
+        # If it starts with '0::', the '0' should be left out too.
+        ipv6 = ipv6[1:]
+    if ipv6.endswith('::0'):
+        # If it ends with '::0', the '0' should be left out too.
+        ipv6 = ipv6[:-1]
+    #This is clean ipv6, Lets return.
+    return ipv6
 
 def prefix_to_ipv6netmask(base):
     if type(base) is str:
+        #if it is a string, could be that a '/' is still in it. remove it if so.
         base=base.replace('/','')
     try:
+        #convert to integer
         base=int(base)
     except:
         raise IPError("invalid numeric expression for ipv6 network base {}".format(base))
-    return int_to_ipv6((2**base-1) * 2** (128-base))
 
+    #Generate the amount of ones as required (/24 would generate 16 times a 1, like 111111111111111111111111)
+    #Basically, 2**24 would be a 1 and 24 zeros. If you substract 1, you end up with 24 1's.
+    ones = 2**base-1
 
+    #After the ones, there should be a number of zeroes making a total of 128 bits.
+    #So for 96 1's there should be 32 zero's and for 64 there should be 64. This is always (128-base) zero's.
+    #For every zero, one could multiply by two, so for 32 zero's one should multiply by 2**32.
+    #And for (128-base) zero's, one can multiply with 2**(128-base)
+    multiplier = 2 ** (128-base)
+    netmask = ones * multiplier
+
+    #convert t to a ipv6 string with int_to_ipv6 and return it
+    return int_to_ipv6(netmask)
+
+# This is a list of authentication methods that can be set in pg_hba
 PgHbaMethods = [ "trust", "reject", "md5", "password", "gss", "sspi", "krb5", "ident", "peer", "ldap", "radius", "cert", "pam" ]
+# This is a list of source types that can be set in pg_hba
 PgHbaTypes = [ "local", "host", "hostssl", "hostnossl" ]
+# This is a list of abbreviations that can be set to control the order of lines
 PgHbaOrders = [ "sdu", "sud", "dsu", "dus", "usd", "uds"]
+# This is a list of headers that the elements of pg_hba have
 PgHbaHDR = [ 'type', 'db', 'usr', 'src', 'mask', 'method', 'options']
 
+#Always split by any of spaces, tabs and \n
 split_re = re.compile('\s+')
 
-
-# See http://stackoverflow.com/questions/53497/regular-expression-that-matches-valid-ipv6-addresses for more info...
+'''
+The following generates a regular expression which can be used to find ipv4 addresses.
+There are easier approaches, but this is the most thorough one.
+See http://stackoverflow.com/questions/53497/regular-expression-that-matches-valid-ipv6-addresses for more info...
+'''
+#segment of ipv4, can be 0 to 255
 IPV4SEG   = '(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])'
-
+#IPv4 address consists of 3x(segment+.)+segement
 IPV4ADDR  = '('+IPV4SEG+'\.){3,3}'+IPV4SEG
 
+'''
+The following generates a regular expression which can be used to find ipv6 addresses.
+There are easier approaches, but this is the most thorough one.
+See http://stackoverflow.com/questions/53497/regular-expression-that-matches-valid-ipv6-addresses for more info...
+'''
+
+#segment of ipv6, can be 0 to 4 times (0-9, a-z or A-Z)
 IPV6SEG   = '[0-9a-fA-F]{1,4}'
 
+#This a concattenation of all possible combinations that would describe a valid ipv6 address.
+#Comment after the line gives an example.
 IPV6ADDR  = '(('+IPV6SEG+':){7,7}'+IPV6SEG+'|'           # 1:2:3:4:5:6:7:8
 IPV6ADDR += '('+IPV6SEG+':){1,7}:|'                      # 1::
 IPV6ADDR += '('+IPV6SEG+':){1,6}:'+IPV6SEG+'|'           # 1::8               1:2:3:4:5:6::8   1:2:3:4:5:6::8
@@ -207,20 +346,26 @@ IPV6ADDR += 'fe80:(:'+IPV6SEG+'){0,4}%[0-9a-zA-Z]{1,}|'  # fe80::7:8%eth0     fe
 IPV6ADDR += '::(ffff(:0{1,4}){0,1}:){0,1}'+IPV4ADDR+'|'  # ::255.255.255.255  ::ffff:255.255.255.255  ::ffff:0:255.255.255.255 (IPv4-mapped IPv6 addresses and IPv4-translated addresses)
 IPV6ADDR += '('+IPV6SEG+':){1,4}:'+IPV4ADDR+')'          # 2001:db8:3:4::192.0.2.33  64:ff9b::192.0.2.33 (IPv4-Embedded IPv6 Address)
 
+#regular expression to detect if a string is an ipv4 address
 ipv4_re     = re.compile('^\s*'+IPV4ADDR+'(/\d{1,2})?\s*$')
+#regular expression to find an ipv4 address in a string
 ipv4part_re = re.compile(IPV4ADDR)
+#regular expression to detect if a string is an ipv6 address
 ipv6_re     = re.compile('^\s*'+IPV6ADDR+'(/\d{1,3})?\s*$')
-ipv6_obs_re = re.compile('(\s|:)(0000:)+')
+#regular expression to find an ipv6 address in a string
+ipv6_obs_re = re.compile('(\s|:)(0{1,4}:)+')
 
+'''
+This exception is raised by the PgHba object when an issue arises
+'''
 class PgHbaError(Exception):
     pass
 
 class PgHba(object):
     """
-        PgHba object to read/write entries to/from.
+    PgHba object to read/write entries to/from.
 
-        pg_hba_file - the pg_hba file almost always /etc/pg_hba
-        Note: I copied this from crontab module to the oratab module and then forward to the PgHba module and modified as needed...
+    pg_hba_file - the pg_hba file almost always /etc/pg_hba
     """
     def __init__(self, pg_hba_file=None, order="sdu", backup=False):
         if order not in PgHbaOrders:
