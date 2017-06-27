@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 
-# == Define: pure_postgres::extension
+# == Define: pure_postgres::sql::extension
 # Installs a postgres database extension
-define pure_postgres::extension (
+define pure_postgres::sql::extension (
   $db    = 'postgres',
 )
 {
@@ -30,7 +30,7 @@ define pure_postgres::extension (
     fail("Not a valid name for a database: ${db}.")
   }
 
-  pure_postgres::run_sql { "create extension ${name} in database ${db}":
+  pure_postgres::sql::run_sql { "create extension ${name} in database ${db}":
     sql    => "CREATE EXTENSION \"${name}\";",
     unless => "SELECT * FROM pg_extension where extname = '${name}';",
     db     => $db,

@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 
-# == Define: pure_postgres::db
+# == Define: pure_postgres::sql::db
 # Creates a postgres database
-define pure_postgres::db (
+define pure_postgres::sql::db (
   $owner   = undef,
 )
 {
@@ -26,7 +26,7 @@ define pure_postgres::db (
     fail("Not a valid name for a database: ${name}.")
   }
 
-  pure_postgres::run_sql { "create database ${name}":
+  pure_postgres::sql::run_sql { "create database ${name}":
     sql    => "CREATE DATABASE \"${name}\";",
     unless => "SELECT * FROM pg_database where datname = '${name}';",
   }
@@ -36,9 +36,9 @@ define pure_postgres::db (
       notify { "Not a valid owner for a database: ${owner}.": }
     }
 
-    pure_postgres::run_sql { "database ${name} owner ${owner}":
+    pure_postgres::sql::run_sql { "database ${name} owner ${owner}":
       sql     => "ALTER DATABASE \"${name}\" OWNER TO \"${owner}\";",
-      require => pure_postgres::run_sql["create database ${name}"],
+      require => pure_postgres::sql::run_sql["create database ${name}"],
     }
   }
 

@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 
-# == Define: pure_postgres::role
+# == Define: pure_postgres::sql::role
 #
 # Creates a postgres role
-define pure_postgres::role
+define pure_postgres::sql::role
 (
   $with_db       = false,
   $password_hash = undef,
@@ -42,7 +42,7 @@ define pure_postgres::role
 
   if $password_hash {
     if $password_hash !~ /md5[0-9a-f]{32}/ {
-      fail("You can only use a md5 hashed password for pure_postgres::role(${name}). ")
+      fail("You can only use a md5 hashed password for pure_postgres::sql::role(${name}). ")
     }
     $pwsql = "password '${password_hash}' LOGIN"
   } else {
@@ -50,7 +50,7 @@ define pure_postgres::role
   }
 
   if $with_db {
-    pure_postgres::db { $name:
+    pure_postgres::sql::db { $name:
     }
   }
 
@@ -65,13 +65,13 @@ define pure_postgres::role
     $sql_searchpath = ''
   }
 
-  pure_postgres::run_sql { "create role ${name}":
+  pure_postgres::sql::run_sql { "create role ${name}":
     sql    => "CREATE ROLE ${name} ${pwsql}; ${sql_searchpath}",
     unless => "SELECT * FROM pg_roles where rolname = '${name}'",
   }
 
   if $with_db {
-    pure_postgres::run_sql { "database ${name} owner ${name}":
+    pure_postgres::sql::run_sql { "database ${name} owner ${name}":
       sql     => "ALTER DATABASE ${name} OWNER TO ${name};",
       unless  => "SELECT * FROM pg_database where datname = '${name}' and datdba in (select oid from pg_roles where rolname = '${name}');",
       require => [ Pure_postgres::Db[$name], Pure_postgres::Run_sql["create role ${name}"] ],
@@ -79,21 +79,21 @@ define pure_postgres::role
   }
 
   if $superuser {
-    pure_postgres::run_sql { "role ${name} with superuser":
+    pure_postgres::sql::run_sql { "role ${name} with superuser":
       sql    => "ALTER ROLE ${name} SUPERUSER;",
       unless => "SELECT * FROM pg_roles where rolname = '${name}' and rolsuper;",
     }
   }
 
   if $replication {
-    pure_postgres::run_sql { "role ${name} with replication":
+    pure_postgres::sql::run_sql { "role ${name} with replication":
       sql    => "ALTER ROLE ${name} REPLICATION;",
       unless => "SELECT * FROM pg_roles where rolname = '${name}' and rolreplication;",
     }
   }
 
   if $canlogin {
-    pure_postgres::run_sql { "role ${name} with login":
+    pure_postgres::sql::run_sql { "role ${name} with login":
       sql    => "ALTER ROLE ${name} LOGIN;",
       unless => "SELECT * FROM pg_roles where rolname = '${name}' and rolcanlogin;",
     }

@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 
-# == Deinition: pure_postgres::run_sql
-define pure_postgres::run_sql (
+# == Deinition: pure_postgres::sql::run_sql
+define pure_postgres::sql::run_sql (
   $sql,
   $unless = undef,
   $user   = $pure_postgres::params::postgres_user,
