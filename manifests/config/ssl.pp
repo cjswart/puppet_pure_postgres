@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 
-# == Class: pure_postgres::ssl
+# == Class: pure_postgres::config::ssl
 #
 # Configs a server certificate for postgres 
-class pure_postgres::ssl
+class pure_postgres::config::ssl
 (
   $data      = $pure_postgres::pg_data_dir,
   $cn        = $pure_postgres::pg_ssl_cn,
@@ -32,7 +32,7 @@ class pure_postgres::ssl
                       '-country', $country, '-state', $state, '-locality', $locality )
 
   exec { "exec ${cmd}":
-    user    => $pure_postgres::postgres_user,
+    user    => $pure_postgres::config::postgres_user,
     command => $cmd,
     require => File["${pure_postgres::params::pg_bin_dir}/generate_server_cert.sh"],
     creates => "${pure_postgres::pg_data_dir}/server.crt",

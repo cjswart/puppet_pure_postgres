@@ -27,7 +27,7 @@ class pure_postgres::config
   file { "${pure_postgres::pg_bin_dir}/pure_postgres_releasenotes.txt":
     ensure => 'file',
     source => 'puppet:///modules/pure_postgres/releasenotes.txt',
-    owner  => $pure_postgres::postgres_user,
+    owner  => $pure_postgres::config::postgres_user,
     group  => $pure_postgres::postgres_group,
     mode   => '0750',
   }
@@ -79,7 +79,7 @@ class pure_postgres::config
   }
 
   if $do_initdb {
-    include pure_postgres::initdb
+    include pure_postgres::config::initdb
   }
 
   file { "${pure_postgres::params::pg_etc_dir}/postgresql.conf":

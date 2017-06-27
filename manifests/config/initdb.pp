@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 
-# == Class: pure_postgres::initdb
+# == Class: pure_postgres::config::initdb
 #
 # Module for initing a new postgres cluster
-class pure_postgres::initdb
+class pure_postgres::config::initdb
 (
 ) inherits pure_postgres
 {
@@ -45,7 +45,7 @@ class pure_postgres::initdb
     cwd     => $pure_postgres::params::pg_bin_dir,
   }
 
-  pure_postgres::pg_hba {'pg_hba entry for local':
+  pure_postgres::config::pg_hba {'pg_hba entry for local':
     connection_type => 'local',
     database        => 'all',
     user            => 'all',
@@ -54,7 +54,7 @@ class pure_postgres::initdb
     require         => Exec["move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf"],
   }
 
-  pure_postgres::pg_hba {'pg_hba entry for localhost':
+  pure_postgres::config::pg_hba {'pg_hba entry for localhost':
     connection_type => 'host',
     database        => 'all',
     user            => 'all',
@@ -64,7 +64,7 @@ class pure_postgres::initdb
     require         => Exec["move ${pure_postgres::params::pg_etc_dir}/pg_hba.conf"],
   }
 
-  pure_postgres::pg_hba {'pg_hba entry for localhost IPv6':
+  pure_postgres::config::pg_hba {'pg_hba entry for localhost IPv6':
     connection_type => 'host',
     database        => 'all',
     user            => 'all',
@@ -75,7 +75,7 @@ class pure_postgres::initdb
   }
 
   if $pure_postgres::do_ssl {
-    class{ 'pure_postgres::ssl':
+    class{ 'pure_postgres::config::ssl':
       require => Exec["initdb ${pure_postgres::pg_data_dir}"],
     }
   }

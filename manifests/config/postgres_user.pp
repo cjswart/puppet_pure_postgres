@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 
-# == Class: pure_postgres::postgres_user
+# == Class: pure_postgres::config::postgres_user
 #
 # Create postgres user and groups
-class pure_postgres::postgres_user
+class pure_postgres::config::postgres_user
 (
 ) inherits pure_postgres::params
 {
