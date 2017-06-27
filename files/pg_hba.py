@@ -19,6 +19,60 @@
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+'''
+This script is used to manage pg_hba rules in a pg_hba.conf file.
+It reads the rules, checks if a change should be made, and applies if it does.
+It can handle both ipv4 addresses/networks aswell as ipv6 addresses/networks.
+
+A strong point is that it manages rules very intelligently.
+- It converts IP addresses to integers and as such it will see no difference between 
+  - 192.168.0.1 and 192.168.0.01
+  - ::c0a8::1 and ::192.168.0.1
+- It converts a base (e.a. /24) to a netmask (e.a. 255.255.255.0) and uses that as 
+  part of the key to register the rule in the local object. Therefore it sees both 
+  as the same (192.168.0.1/24 is the same source as 192.168.0.1/255.255.255.0 )
+- It sorts rules from fine grained to large grained. This makes it possble to
+  - Create a rule excluding everyting from segment 192.168.0.1/24
+  - After that create a rule to grant access to 192.168.0.100
+- It removes duplicates
+
+A weak point is that it always re-sorts the rules.
+So manually managed hba files (which have a different sort, applied by hand),
+might change after using this script and this could have technical implications.
+This is not a big concern as long as you use only this script to manage, 
+only if you use this with manually managed files.
+
+Example usage:
+The following command:
+  pg_hba.py -b -c -d postgres,test1 -f /tmp/pg_hba.conf -g dba --mode 640 -n 255.255.255.0 --owner postgres -o sdu --state present -r -s 192.168.0.0 -t host -u testuser1,testuser2
+Will do the following:
+- Create a file /tmp/pg_hba.conf (if it doesn't exist), with owner postgres:dba and mode 640
+- Open the file /tmp/pg_hba.conf
+- Check if rules below exists, if they all exist: end
+- If it doesnt exist add the rule
+- sort the file correctly (first by source, then by database, then by user)
+- Create a backup file (to a file at /tmp/pg_hba..., exact path printed to stdout) and copy contents to it
+- Write the newly generated file back
+- reload postgres service (/etc/init.d/postgres reload)
+Rules:
+  host	postgres	testuser1	192.168.0.0	255.255.255.0	md5
+  host	test1	testuser1	192.168.0.0	255.255.255.0	md5
+  host	test1	testuser2	192.168.0.0	255.255.255.0	md5
+  host	postgres	testuser2	192.168.0.0	255.255.255.0	md5
+
+Last but not least: the -o option. The script tries to correctly sort the rules based on the grainness. So:
+- a /24 network will enter below a /32 network (single ip) and above a /16 network.
+- a user will enter above keyword all
+- a database will enter above keyword all
+But, what would happen if two rules have seperate garins per dimension. 
+For instance, a rule for a /24 segment for a particular user, and a rule for a /32 network for keyword all (for all users).
+In that case, the -o option will set which part has priority over the other. 
+- sdu will choose source over database over users, so
+  The rule for a /24 segment for a particular user will end below the rule for a /32 network for all users.
+- usd will choose user over source over database, so
+  The rule for a /32 network for all users will end below the rule for a /24 segment for a particular user.
+'''
+
 import os
 import pwd
 import grp
@@ -300,17 +354,17 @@ def prefix_to_ipv6netmask(base):
     #convert t to a ipv6 string with int_to_ipv6 and return it
     return int_to_ipv6(netmask)
 
-# This is a list of authentication methods that can be set in pg_hba
-PgHbaMethods = [ "trust", "reject", "md5", "password", "gss", "sspi", "krb5", "ident", "peer", "ldap", "radius", "cert", "pam" ]
-# This is a list of source types that can be set in pg_hba
-PgHbaTypes = [ "local", "host", "hostssl", "hostnossl" ]
-# This is a list of abbreviations that can be set to control the order of lines
-PgHbaOrders = [ "sdu", "sud", "dsu", "dus", "usd", "uds"]
-# This is a list of headers that the elements of pg_hba have
-PgHbaHDR = [ 'type', 'db', 'usr', 'src', 'mask', 'method', 'options']
-
-#Always split by any of spaces, tabs and \n
-split_re = re.compile('\s+')
+def gateway(network, netmask):
+    if ipv4_re.search(network):
+        nw_int = ipv4_to_int(network)
+        nm_int = ipv4_to_int(netmask)
+        return (nw_int & nm_int) + 1
+    elif ipv6_re.search(network):
+        nw_int = ipv6_to_int(network)
+        nm_int = ipv6_to_int(netmask)
+        return (nw_int & nm_int) + 1
+    else:
+        return 0
 
 '''
 The following generates a regular expression which can be used to find ipv4 addresses.
@@ -356,20 +410,42 @@ ipv6_re     = re.compile('^\s*'+IPV6ADDR+'(/\d{1,3})?\s*$')
 ipv6_obs_re = re.compile('(\s|:)(0{1,4}:)+')
 
 '''
+These are some lists that act as enum for the valid values for pg_hba settings.
+'''
+# This is a list of authentication methods that can be set in pg_hba
+PgHbaMethods = [ "trust", "reject", "md5", "password", "gss", "sspi", "krb5", "ident", "peer", "ldap", "radius", "cert", "pam" ]
+# This is a list of source types that can be set in pg_hba
+PgHbaTypes = [ "local", "host", "hostssl", "hostnossl" ]
+# This is a list of abbreviations that can be set to control the order of lines
+PgHbaOrders = [ "sdu", "sud", "dsu", "dus", "usd", "uds"]
+# This is a list of headers that the elements of pg_hba have
+PgHbaHDR = [ 'type', 'db', 'usr', 'src', 'mask', 'method', 'options']
+
+#Always split by any of spaces, tabs and \n
+split_re = re.compile('\s+')
+
+'''
 This exception is raised by the PgHba object when an issue arises
 '''
 class PgHbaError(Exception):
     pass
 
+'''
+This class is used to read and process a pg_hba file.
+'''
 class PgHba(object):
-    """
-    PgHba object to read/write entries to/from.
-
-    pg_hba_file - the pg_hba file almost always /etc/pg_hba
-    """
     def __init__(self, pg_hba_file=None, order="sdu", backup=False):
+        '''
+        Initialize a pg_hba object.
+        - pg_hba_file should be the path of a pg_hba file.
+        - order should be a string of three characters 's', 'd', and 'u'. Every character exactly once.
+        - backup should be set to true to keep a backup of the original file, or to false not to keep a backup.
+        '''
+
+        #Check that order is one of "sdu", "sud", "dsu", "dus", "usd", "uds"
         if order not in PgHbaOrders:
             raise PgHbaError("invalid order setting {0} (should be one of '{1}').".format(order, "', '".join(PgHbaOrders)))
+        #Copy parameters to new object
         self.pg_hba_file = pg_hba_file
         self.rules      = None
         self.comment    = None
@@ -377,45 +453,53 @@ class PgHba(object):
         self.order      = order
         self.backup     = backup
 
-        #self.databases will be update by add_rule and gives some idea of the number of databases (at least that are handled by this pg_hba)
-        self.databases  = set(['postgres', 'template0','template1'])
-
-        #self.databases will be update by add_rule and gives some idea of the number of users (at least that are handled by this pg_hba)
-        #since this migth also be groups with multiple users, this migth be totally off, but at least it is some info...
-        self.users      = set(['postgres'])
-
-        # select whether we dump additional debug info through syslog
-        self.syslogging = False
-
+        #Read the rules of the hba file
         self.read()
 
     def read(self):
-        # Read in the pg_hba from the system
+        '''
+        This procedure read the rules from the pg_hba file.
+        '''
+
+        #Reset self.rules and self.comment
         self.rules = {}
         self.comment = []
-        # read the pg_hbafile
+
+        if not self.pg_hba_file:
+           return
+
         try:
+            # open the pg_hbafile
             f = open(self.pg_hba_file, 'r')
+            #Process al lines
             for l in f:
+                #Strip spaces
                 l=l.strip()
                 #uncomment
                 if '#' in l:
                     l, comment = l.split('#', 1)
                     self.comment.append('#'+comment)
+                #Convert line to rule
                 rule = self.line_to_rule(l)
                 if rule:
+                    #Add rule to this object
                     self.add_rule(rule)
+            # Finished reading all lines. Done with this file.
             f.close()
+            # Since we have read contents, this object represents file without changes, so write should do anything.
             self.changed = False
         except IOError, e:
             raise PgHbaError("pg_hba file '{0}' doesn't exist. Use create option to autocreate.".format(self.pg_hba_file))
 
     def line_to_rule(self, line):
-        #split into sid, home, enabled
+        #First we check that the line actually has info (next to only seperator characters like space and tab).
+        #This is checked by replacing all seperator characters with ''. If there is anything left in result, there is data in there.
         if split_re.sub('', line) == '':
             #empty line. skip this one...
             return None
+        #Now split with split_re in cols
         cols = split_re.split(line)
+        #And check that the number of cols is as it is expected
         if len(cols) < 4:
             raise PgHbaError("File {0} has a rule with too few columns: {1}.".format(self.pg_hba_file, line))
         if cols[0] not in PgHbaTypes:
@@ -423,181 +507,248 @@ class PgHba(object):
         if cols[0] == 'local':
             if cols[3] not in PgHbaMethods:
                 raise PgHbaError("File {0} contains an rule of 'local' type where 4th column '{1}'isnt a valid auth-method.".format(self.pg_hba_file, cols[3]))
+            #For local type, the cols address and netmask are not set in hba file. Set them to none
             cols.insert(3, None)
             cols.insert(3, None)
         else:
             if len(cols) < 6:
+                #For host type, the cols address and netmask are not set in hba file. Set them to none
                 cols.insert(4, None)
             elif cols[5] not in PgHbaMethods:
+                #Unknown method. Probably this is no method.
                 cols.insert(4, None)
             if len(cols) < 7:
+                #options are not set (which is almost always). Set to none
                 cols.insert(7, None)
             if cols[5] not in PgHbaMethods:
                 raise PgHbaError("File {0} contains an rule '{1}' that has no valid method.".format(self.pg_hba_file, line))
+        #Convert list to dict with named items
         rule = dict(zip(PgHbaHDR, cols[:7]))
+        #Remove all columns that have no value from dictionary
         self.cleanEmptyRuleKeys(rule)
+        #Set original line in the line value (for future reference)
         rule['line'] = line
         return rule
 
     def cleanEmptyRuleKeys(self, rule):
+        '''
+        This function is a helper function that cleans out dictionary keys 
+        that have no value (value that evaluates to False, like '', False, -1, etc).
+        '''
         for k in rule.keys():
             if not rule[k]:
                 del rule[k]
 
     def rule2key(self, rule):
+        '''
+        This function generates a key from a rule. The key consists of source, db and usr.
+        '''
+        #Set source to something udefull
         if rule['type'] == 'local':
+            #For local conenctions, source can be local
             source = 'local'
         elif ipv4_re.search(rule['src']):
+            #Handle as ipv4 source
             if '/' in rule['src']:
+                #Network inidicated as base. Convert to netmask notation.
                 nw, prefix = rule['src'].split('/')
                 netmask = prefix_to_ipv4netmask(prefix)
                 source = nw+'/'+netmask
             elif 'mask' not in rule.keys():
+                #Network not inidicated. set to 255.255.255.255 (equivalent of /32 which is one ip).
                 source = rule['src']+'/255.255.255.255'
             else:
+                #Network inidicated as ip with netmask. Glue ip and netmask togethers with slash.
                 source = rule['src']+'/'+rule['mask']
         elif ipv6_re.search(rule['src']):
+            #Handle as ipv6 source
             if '/' in rule['src']:
+                #Network inidicated as base. Convert to netmask notation.
                 nw, prefix = rule['src'].split('/')
                 netmask = prefix_to_ipv6netmask(prefix)
                 source = nw+'/'+netmask
             elif 'mask' not in rule.keys():
+                #Network not inidicated. set to ffff:ffff:ffff:ffff:ffff:ffff (equivalent of /128, which is one ip).
                 source = rule['src']+'/ffff:ffff:ffff:ffff:ffff:ffff'
             else:
+                #Network inidicated as ip with netmask. Glue ip and netmask togethers with slash.
                 source = rule['src']+'/'+rule['mask']
         else:
+            #Don't understand, lets not be smart.
             source = rule['src']
 
         return (source, rule['db'], rule['usr'])
 
     def rule2weight(self, rule):
-        # For networks, every 1 in 'netmask in binary' makes the subnet more specific.
-        # Therefore I chose to use prefix as the weight.
-        # So a single IP (/32) should have twice the weight of a /16 network.
-        # To keep everything in the same wieght scale for IPv6, I chose 
-        # - a scale of 0 - 128 from 0 bits to 32 bits for ipv4 and 
-        # - a scale of 0 - 128 from 0 bits to 128 bits for ipv6.
+        '''
+        This function can calculate the weight from a rule.
+        It is only used during the render function, which sorts and outputs the rules in correct order.
+
+        The weigth actually defines the grainness of the rule (how specific is this rule).
+        For networks, every 1 in 'netmask in binary' makes the subnet more specific.
+        Therefore network prefix has an important imact on the weight.
+        So a single IP (/32) should have twice the weight of a /16 network.
+        To keep everything in the same weight scale for IPv6,
+        - a scale of 0 - 128 from 0 bits to 32 bits is chosen for ipv4 and 
+        - a scale of 0 - 128 from 0 bits to 128 bits is chosen for ipv6.
+        In addition to weight, also the db, username and the gateway is added to sort on that too.
+        '''
         if rule['type'] == 'local':
             #local is always 'this server' and therefore considered /32
             srcweight = 128 #(ipv4 /32 is considered equivalent to ipv6 /128)
+            gw = 0
         elif ipv4_re.search(rule['src']):
             if '/' in rule['src']:
                 #prefix tells how much 1's there are in netmask, so lets use that for sourceweight
-                prefix = rule['src'].split('/')[1]
+                ip, prefix = rule['src'].split('/', 1)
                 srcweight = int(prefix) * 4
+                gw = gateway(ip, prefix_to_ipv4netmask(prefix))
             elif 'mask' in rule.keys():
-               #Netmask. Let's count the 1's in the netmask in binary form.
+                #Netmask. But /24 = the number of 1's in the binary form of the netmask,
+                #So let's count the 1's in this netmask in binary form and use that for weight.
                 bits = "{0:b}".format(ipv4_to_int(rule['mask']))
                 srcweight = bits.count('1') * 4
+                gw = gateway(rule['src'], rule['mask'])
             else:
                 #seems, there is no netmask / prefix to be found. Then only one IP applies.
-                srcweight = 128 #(ipv4 /32 is considered equivalent to ipv6 /128)
+                #ipv4 /32 is considered equivalent to ipv6 /128.
+                srcweight = 128
+                gw = ip4_to_int(rule['src'])
         elif ipv6_re.search(rule['src']):
             if '/' in rule['src']:
                 #prefix tells how much 1's there are in netmask, so lets use that for sourceweight
-                prefix = rule['src'].split('/')[1]
+                ip, prefix = rule['src'].split('/', 1)
                 srcweight = int(prefix)
+                gw = gateway(ip, prefix_to_ipv6netmask(prefix))
             elif 'mask' in rule.keys():
-               #Netmask. Let's count the 1's in the netmask in binary form.
+                #Netmask. But /24 = the number of 1's in the binary form of the netmask,
+                #So let's count the 1's in this netmask in binary form and use that for weight.
                 bits = "{0:b}".format(ipv6_to_int(rule['mask']))
                 srcweight = bits.count('1') * 4
+                gw = gateway(rule['src'], rule['mask'])
             else:
                 #seems, there is no netmask / prefix to be found. Then only one IP applies.
                 srcweight = 128 #(ipv4 /32 is considered equivalent to ipv6 /128)
+                gw = ip6_to_int(rule['src'])
         else:
             #You can also write all to match any IP address, samehost to match any of the server's own IP addresses, or samenet to match any address in any subnet that the server is directly connected to.
             if rule['src'] == 'all':
+                #every ip is ok. Lets put this one on the very bottom of the file.
                 srcweight = 0
+                gw = 1
             elif rule['src'] == 'samehost':
+                #All i's from this host is ok. Lets consider this is only one ip.
                 srcweight = 128 #(ipv4 /32 is considered equivalent to ipv6 /128)
+                gw = 0
             elif rule['src'] == 'samenet':
                 #Might write some fancy code to determine all prefix's 
                 #from all interfaces and find a sane value for this one.
                 #For now, let's assume /24...
                 srcweight = 96 #(ipv4 /24 is considered equivalent to ipv6 /96)
+                gw = 0
             elif rule['src'][0] == '.':
                 # suffix matching, let's asume a very large scale and therefore a very low weight.
                 srcweight = 64 #(ipv4 /16 is considered equivalent to ipv6 /64)
+                gw = -1
             else:
-                #hostname, let's asume only one host matches
+                #This seems to be a hostname. Let's asume only one host matches
                 srcweight = 128 #(ipv4 /32 is considered equivalent to ipv6 /128)
+                gw = -1
 
-        #One little thing: for db and user weight, higher weight means less specific and thus lower in the file.
-        #Since prefix is higher for more specific, I inverse the output to align with how dbweight and userweight works...
-        srcweight = 128 - srcweight #(higher prefix should be lower weight)
-
+        #dbweight is equal to the number of databases.
         if rule['db'] == 'all':
-            dbweight = len(self.databases) + 1
-        elif rule['db'] == 'replication':
-            dbweight = 0
-        elif rule['db'] in [ 'samerole', 'samegroup']:
-            dbweight = 1
+            #More than one, make it huge and sink to the bottom.
+            dbweight = 1000
         else:
-            dbweight = 1 + rule['db'].count(',')
+            #Count comma's to find number of databases
+            dbweight = rule['db'].count(',') + 1
+
+        #uweight is equal to the number of users
 
         if rule['usr'] == 'all':
-            uweight = len(self.users) + 1
+            #All users, so (probably) more than one. Sink to bottom.
+            uweight = 1000
         else:
-            uweight = 1
+            #More than one, sink to the bottom
+            uweight = rule['usr'].count(',') + 1
 
+        #Now, put the weights in the correct order, according to self.order parameter
         ret = []
         for c in self.order:
             if c == 'u':
                 ret.append(uweight)
             elif c == 's':
-                ret.append(srcweight)
+                ret.append(-srcweight)
             elif c == 'd':
                 ret.append(dbweight)
+        #Add dbname, username and gateway for sort when all else is the same
+        ret += [ rule['db'], rule['usr'], gw ]
 
-        return tuple(ret)
-
-    def log_message(self, message):
-        if self.syslogging:
-            syslog.syslog(syslog.LOG_NOTICE, 'ansible: "%s"' % message)
-
-    def is_empty(self):
-        if len(self.rules) == 0:
-            return True
-        else:
-            return False
-
-    def reload(self):
-        if self.changed:
-            try:
-                subprocess.call(['/etc/init.d/postgres', 'reload'])
-            except:
-                pass
+        #Return the end weight tuple
+        return tuple( ret )
 
     def write(self, reload=False):
+        '''
+        This function writes a hba file if it has added or deleted rules.
+        '''
         if not self.changed:
+            #No changes, then don't write either.
             return
 
         if self.pg_hba_file:
             if self.backup:
+                #Filepath is set and backup is selected.
+                #Make temp file for backup
                 backup_file_h, backup_file = tempfile.mkstemp(prefix='pg_hba')
+                #Copy contents
                 shutil.copy(self.pg_hba_file, backup_file)
+                #Print location of temp file
+                print('Backup written to {0}'.format(backup_file))
+            #Open the file, so we can write new conent to it
             fileh = open(self.pg_hba_file, 'w')
         else:
+            #no file path was set. create temp file
             filed, path = tempfile.mkstemp(prefix='pg_hba')
+            #open temp file
             fileh = os.fdopen(filed, 'w')
+            #Print location of temp file
+            print('Writing changed data to {0}'.format(path))
 
-        fileh.write(self.render())
+        #render altered contents and write to file
+        for line in self.render():
+            fileh.write(line+'\n')
         if reload:
-            self.reload()
+            try:
+                #File has changed. reload and don't mind errors if they occur.
+                subprocess.call(['/etc/init.d/postgres', 'reload'])
+            except:
+                pass
+        #file was written, so file and object are in sync
         self.changed = False
+        #Close file (don't need it anymore)
         fileh.close()
 
     def new_rules(self, contype, databases, users, source, netmask, method, options):
+        '''
+        This function creates a new rule that fits to the parsed parameters.
+        '''
+
+        #Check validity of method and contype parameters
         if method not in PgHbaMethods:
             raise PgHbaError("invalid method {0} (should be one of '{1}').".format(method, "', '".join(PgHbaMethods)))
         if contype not in PgHbaTypes:
             raise PgHbaError("invalid connection type {0} (should be one of '{1}').".format(contype, "', '".join(PgHbaTypes)))
 
+        #Loop through databases (if option was like db1,db2,db3 )
+        #and create a new rule for every database
         for db in databases.split(','):
+            #Loop through users (if option was like user1,user2,user3 )
+            #and create a new rule for every user
             for usr in users.split(','):
-
+                #Create a dictionary contaning the specified rule config
                 rule = dict(zip(PgHbaHDR, [contype, db, usr, source, netmask, method, options]))
 
+                #Cleanup some weird combinations
                 if contype == 'local':
                     del rule['src']
                     del rule['mask']
@@ -611,59 +762,79 @@ class PgHba(object):
                         rule['src'] += '/128'
                 else:
                     del rule['mask']
-
+                #Cleanup keys with empty values
                 self.cleanEmptyRuleKeys(rule)
 
+                #Generate a line that conforms to this rule
                 line = [ rule[k] for k in PgHbaHDR if k in rule.keys() ]
                 rule['line'] = "\t".join(line)
+
+                #return a rule per db per user
                 yield rule
 
     def add_rule(self, rule):
+        '''
+        This function adds (or replaces) a new rule.
+        It tries to find original and checks for differences.
+        If original doesn't exist, new rule is added.
+        If original exists, but differs, it is replaced by the new rule.
+        '''
+        #First find the key
         key = self.rule2key(rule)
         try:
+            #Try to find the original rule with this key
             oldrule = self.rules[key]
+            #find keys of elements in the original rule
             ekeys = set(oldrule.keys() + rule.keys())
+            #But skip line (that doesn;t need to be exactly the same)
             ekeys.remove('line')
             for k in ekeys:
+                #Loop through keys and check values with new rule
                 if oldrule[k] != rule[k]:
+                    #A value is different. So, go to the exception block and replace the rule
                     raise Exception('')
         except:
+            #Seems that original rule differs from new, or doesn't exist. Add new rule (in its place)
             self.rules[key] = rule
+            #Also tell hba object that it is changed since last reading from or writing to file
             self.changed = True
-            if rule['db'] not in [ 'all', 'samerole', 'samegroup', 'replication' ]:
-                databases = set(rule['db'].split(','))
-                self.databases.update(databases)
-            if rule['usr'] != 'all':
-                user = rule['usr']
-                if user[0] == '+':
-                    user = user[1:]
-                self.users.add(user)
-
+            
     def remove_rule(self, rule):
+        '''
+        This procedure finds a rule and removes it from the object.
+        '''
+        #First find the key of the rule
         keys = self.rule2key(rule)
         try:
+            #Try to remove the rule
             del self.rules[keys]
+            #Found and removed. Tell hba object that it is changed since last reading from or writing to file
             self.changed = True
         except:
             pass
         
     def get_rules(self):
+        '''
+        This function returns a list of all the rules.
+        '''
         ret = []
-        for k in self.rules.keys():
-            rule = self.rules[k]
-            del rule['line']
-            ret.append(rule)
-        return ret
+        for rk in self.rules.keys():
+            #This zip of list comprehension basically creates a copy of the rule
+            #but without the 'line' item. It creates a copy rather than modifying the original.
+            rule = dict( [ (k, rules[rk][k]) for k in rules[rk].keys() if k != 'line' ] )
+            #Return this rule
+            yield(rule)
 
     def render(self):
-        comment = '\n'.join(self.comment)
-        sorted_rules = sorted(self.rules.values(), key=self.rule2weight)
-        rule_lines = '\n'.join([ r['line'] for r in sorted_rules ])
-        result = comment+'\n'+rule_lines
-        #End it properly with a linefeed (if not already).
-        if result and result[-1] not in ['\n', '\r']:
-            result += '\n'
-        return result
+        '''
+        This function returns the contents that the altered pg_hba file should have.
+        '''
+        #First return the comments that where already there, line by line
+        for comment in self.comment:
+            yield(comment)
+        #Then sort the rules by the weight of the rules and return them ruke by rule
+        for rule in sorted(self.rules.values(), key=self.rule2weight):
+            yield(rule['line'])
 
 # ===========================================
 # Module execution.
@@ -671,13 +842,14 @@ class PgHba(object):
 
 if __name__ == "__main__":
 
+    #Declare the argument parser
     import argparse
     parser = argparse.ArgumentParser(description='Modify entries in pg_hba')
     parser.add_argument('-b', '--backup',         help='Create a backup of the file before changing it.', action='store_true')
-    parser.add_argument('-c', '--create',         help="Create the file if it doesn't exist",             action='store_false')
+    parser.add_argument('-c', '--create',         help="Create the file if it doesn't exist",             action='store_true')
     parser.add_argument(      '--check',          help="Only check if changes are required.",             action='store_true')
     parser.add_argument('-d', '--databases',      help='List of databases',                               default='all')
-    parser.add_argument('-f', '--file', '--dest', help='Path to file',                                    default='/etc/pgpure/postgres/9.6/data/pg_hba.conf')
+    parser.add_argument('-f', '--file', '--dest', help='Path to file',                                    default='')
     parser.add_argument('-g', '--group',          help='Default group ownership of file',                 default='postgres')
     parser.add_argument('--mode',                 help='Default access mode of file',                     default='640')
     parser.add_argument('-m', '--method',         help='pg_hba connection method',                        default='md5')
@@ -691,24 +863,35 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--contype',        help='Connection type',                                 default='host')
     parser.add_argument('-u', '--users',          help='List of users',                                   default='all')
 
+    #Parse the arguments
     options = parser.parse_args()
 
+    #Find the expanded path of the file. '~' is expanded to $HOMEDIR, and 'subfolder/../' is expanded to '/'.
     dest      = os.path.expanduser(options.file)
 
-    if options.create:
+    #If the file should exist, test if it exists, or create it
+    if dest and options.create:
         touch(dest, options.owner, options.group, options.mode)
+    #Parse the hba file
     pg_hba = PgHba(dest, options.order, options.backup)
 
     if options.contype:
+        #Generate the new rules
         for rule in pg_hba.new_rules(options.contype, options.databases, options.users, options.source, options.netmask, options.method, options.options):
             if options.state == "present":
+                #Add the rule
                 pg_hba.add_rule(rule)
             else:
+                #Remove the rule
                 pg_hba.remove_rule(rule)
         if options.check:
+            #Only pretend
             if pg_hba.changed:
+                #Changed, so return exitcode other then 0
                 sys.exit(1)
             else:
+                #Not changed, so return 0
                 sys.exit(0)
         else:
+            #Write contents (write cecks if it has changed and if not, skips)
             pg_hba.write(options.reload)
