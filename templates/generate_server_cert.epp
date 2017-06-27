@@ -17,10 +17,12 @@
 # You should have received a copy of the GNU General Public License
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 
+#Break on any error
 set -e
 
 function usage()
 {
+  #Capture second parsed parameter
   exitcode=${2:-0}
 
   cat << EOF
@@ -40,14 +42,19 @@ function usage()
      -x            debug mode                          (default: off)
 
 EOF
+  #If an additional message was parsed, print that too and exit with error
   if [ "$1" ]; then
     echo -e "$1" | sed 's/^/  /'
     [ $exitcode -eq 0 ] && exitcode=-1
   fi
+  #Exit with exitcode as was parsed as second parameter
   exit $exitcode
 }
 
+#Set default for PGDATA
 [ "${PGDATA}" ] || PGDATA="/var/pgpure/postgres/<%= $pure_postgres::pg_version %>/data"
+
+#Check PGDATA and exists and ${PGDATA}/server.crt doesn't yet
 if [ ! -e "${PGDATA}" ]; then
   echo "${PGDATA} doesn't exist"
   exit 0
@@ -56,13 +63,21 @@ elif [ -f "${PGDATA}/server.crt" ]; then
   exit 0
 fi
 
+#Generate a random password
 RANDPASS=$(</dev/urandom tr -dc A-Za-z0-9 | head -c32)
+
+#Detect FQDN
 FQDN=$(hostname -f)
+
+#Set a default Country from FQDN
 COUNTRY=$(echo $FQDN | sed 's/.*\.//' | tr [:lower:] [:upper:])
+
+#Set other defaults
 STATE=.
 LOCALITY=.
 ORG=.
 
+#Parse arguments
 while [ -n "$1" ]; do
 case $1 in
   -h)        usage                        ;;
@@ -79,16 +94,27 @@ case $1 in
 esac
 done
 
+#Change Country to first two characters lower case
 COUNTRY=$(echo $COUNTRY | tr [:lower:] [:upper:])
 COUNTRY=${COUNTRY:0:2}
 
+#Make a tempdir for temp files
 TMPDIR=$(mktemp -d)
 cd $TMPDIR
 
+#Generate CSR
 openssl req -new -text -out server.req -passout pass:$RANDPASS -subj "/C=$COUNTRY/ST=$STATE/L=$LOCALITY/O=$ORG/CN=$FQDN"
+
+#Convert private key
 openssl rsa -in privkey.pem -out "${PGDATA}/server.key" -passin pass:$RANDPASS
 rm privkey.pem
+
+#Sign certificate
 openssl req -x509 -in server.req -text -key "${PGDATA}/server.key" -out "${PGDATA}/server.crt"
+
+#Set permissions
 chmod og-rwx "${PGDATA}/server.key"
+
+#Cleanup temporary files
 cd /tmp
 rm -r $TMPDIR
