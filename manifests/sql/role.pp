@@ -74,7 +74,7 @@ define pure_postgres::sql::role
     pure_postgres::sql::run_sql { "database ${name} owner ${name}":
       sql     => "ALTER DATABASE ${name} OWNER TO ${name};",
       unless  => "SELECT * FROM pg_database where datname = '${name}' and datdba in (select oid from pg_roles where rolname = '${name}');",
-      require => [ Pure_postgres::Db[$name], Pure_postgres::Run_sql["create role ${name}"] ],
+      require => [ Pure_postgres::Sql::Db[$name], Pure_postgres::Sql::Run_sql["create role ${name}"] ],
     }
   }
 
