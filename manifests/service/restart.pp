@@ -15,11 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 
-# == Class: pure_postgres::restart
+# == Class: pure_postgres::service::restart
 #
 # Manages service of postgres installed from pure repo
 
-class pure_postgres::restart
+class pure_postgres::service::restart
 (
 )
 {
@@ -35,10 +35,10 @@ class pure_postgres::restart
       cwd         => $pure_postgres::params::pg_bin_dir,
     }
 
-    Exec['service postgres restart'] -> Pure_postgres::Started['postgres restarted']
+    Exec['service postgres restart'] -> Pure_postgres::Service::Started['postgres restarted']
   }
 
-  pure_postgres::started { 'postgres restarted':
+  pure_postgres::service::started { 'postgres restarted':
   }
 
 }

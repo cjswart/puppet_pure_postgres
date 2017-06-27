@@ -15,11 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 
-# == Class: pure_postgres::started
+# == Class: pure_postgres::service::started
 #
 # Wait until postgres is started
 
-define pure_postgres::started
+define pure_postgres::service::started
 (
   $retries     = 5,
   $sleep       = 1,

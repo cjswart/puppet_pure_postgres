@@ -24,11 +24,11 @@ class pure_postgres::service
 )
 {
 
-  include pure_postgres::start
+  include pure_postgres::service::start
 
-  include pure_postgres::restart
+  include pure_postgres::service::restart
 
-  include pure_postgres::reload
+  include pure_postgres::service::reload
 
 }
 

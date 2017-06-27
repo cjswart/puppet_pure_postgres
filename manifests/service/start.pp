@@ -15,11 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 
-# == Class: pure_postgres::start
+# == Class: pure_postgres::service::start
 #
 # Allow postgres service to be started. Forcefull, or by notification
 
-class pure_postgres::start
+class pure_postgres::service::start
 (
   $refreshonly = ! pure_postgres::manage_service,
 )
@@ -37,9 +37,9 @@ class pure_postgres::start
     }
   }
 
-  pure_postgres::started {'postgres started':
+  pure_postgres::service::started {'postgres started':
   }
 
-  Exec['service postgres start'] ~> Pure_postgres::Started['postgres started']
+  Exec['service postgres start'] ~> Pure_postgres::Service::Started['postgres started']
 
 }

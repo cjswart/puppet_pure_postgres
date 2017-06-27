@@ -15,11 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with puppet_pure_postgres.  If not, see <http://www.gnu.org/licenses/>.
 
-# == Class: pure_postgres::reload
+# == Class: pure_postgres::service::reload
 #
 # Manages service of postgres installed from pure repo
 
-class pure_postgres::reload
+class pure_postgres::service::reload
 (
 )
 {

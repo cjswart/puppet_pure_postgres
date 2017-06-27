@@ -117,7 +117,7 @@ class pure_postgres::initdb
   file { "${pure_postgres::pg_data_dir}/postgresql.conf":
     ensure  => 'absent',
     require => Package[$pure_postgres::params::pg_package],
-    before  => Class['pure_postgres::start'],
+    before  => Class['pure_postgres::service::start'],
   }
 
 }

@@ -90,7 +90,7 @@ class pure_postgres::config
     source    => 'puppet:///modules/pure_postgres/postgresql.conf',
     show_diff => false,
     require   => Package[$pure_postgres::params::pg_package],
-    notify    => Class['pure_postgres::start'],
+    notify    => Class['pure_postgres::service::start'],
   }
 
   file { "${pure_postgres::params::pg_etc_dir}/conf.d/autotune.conf":
@@ -100,7 +100,7 @@ class pure_postgres::config
     mode      => '0640',
     content   => epp('pure_postgres/autotune.epp'),
     show_diff => false,
-    notify    => Class['pure_postgres::restart'],
+    notify    => Class['pure_postgres::service::restart'],
   }
 
 }
