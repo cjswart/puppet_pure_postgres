@@ -1,3 +1,11 @@
+1.1.1: Cleanup, and fixed pg_hba file
+- Moved some manifests to subfolders, for clarity
+- Commented many files, templates, scripts
+- Fixed pg_hba script
+  - ipv6 wasn't working properly
+  - sorting of output hba file is now nicer
+  - some other minor things
+
 1.1.0: Cleanup, release notes, commenting, and copyrights
 - Cleanup with puppet lint
 - Added a line to some files and templates stating that the file is managed by puppet
