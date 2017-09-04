@@ -1,3 +1,6 @@
+1.1.2: Added custom fact
+- New custom ruby script will add 'pure_postgres_db_count' fact on nodes with postgres installed. 
+
 1.1.1: Cleanup, and fixed pg_hba file
 - Moved some manifests to subfolders, for clarity
 - Commented many files, templates, scripts
