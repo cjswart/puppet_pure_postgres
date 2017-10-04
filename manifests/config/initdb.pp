@@ -104,6 +104,19 @@ class pure_postgres::config::initdb
 #    require => File["${pure_postgres::params::pg_etc_dir}/postgresql.conf"],
 #  }
 
+  if $pure_postgres::do_syslog {
+    file { "${pure_postgres::params::pg_etc_dir}/conf.d/logging.conf":
+      ensure  => 'present',
+      owner   => $pure_postgres::params::postgres_user,
+      group   => $pure_postgres::params::postgres_group,
+      mode    => '0640',
+      replace => false,
+      source  => 'puppet:///modules/pure_postgres/logging.conf',
+      require => File["${pure_postgres::params::pg_etc_dir}/conf.d"],
+    }
+  }
+
+
   file { "${pure_postgres::params::pg_etc_dir}/conf.d/defaults.conf":
     ensure  => 'present',
     owner   => $pure_postgres::params::postgres_user,
