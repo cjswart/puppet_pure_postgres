@@ -47,8 +47,8 @@ class pure_postgres::params
   $postgres_user      = 'postgres'
   $postgres_group     = 'postgres'
   $do_syslog	      = true
-  $syslog_facility    = 'LOCAL0'
-  $syslog_ident       = 'pgpure'
+  $syslog_facility    = 'LOCAL6'
+  $syslog_ident       = 'pgpure4'
   $do_ssl             = true
   $pg_ssl_cn          = $::fqdn
   $pg_ssl_org         = '.'

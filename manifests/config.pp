@@ -102,6 +102,34 @@ class pure_postgres::config
     show_diff => false,
     notify    => Class['pure_postgres::service::restart'],
   }
+ 
+  if $pure_postgres::do_syslog {
+    file { "${pure_postgres::params::pg_etc_dir}/conf.d/syslog.conf":
+      ensure  => 'present',
+      owner   => $pure_postgres::params::postgres_user,
+      group   => $pure_postgres::params::postgres_group,
+      mode    => '0640',
+      replace => false,
+      source  => 'puppet:///modules/pure_postgres/syslog.conf',
+      require => File["${pure_postgres::params::pg_etc_dir}/conf.d"],
+    }->
+    file_line { 'syslog_facility':
+      path    => "${pure_postgres::params::pg_etc_dir}/conf.d/syslog.conf",
+      line    => "syslog_facility = \'$pure_postgres::syslog_facility\'",
+      match   => '^syslog_facility',
+    }->
+    file_line { 'syslog_ident':
+      path    => "${pure_postgres::params::pg_etc_dir}/conf.d/syslog.conf",
+      line    => "syslog_ident = \'$pure_postgres::syslog_ident\'",
+      match   => '^syslog_ident',
+    }~>Class['pure_postgres::service::reload']
+   
+  }
+  else {
+    file { "${pure_postgres::params::pg_etc_dir}/conf.d/syslog.conf":
+      ensure  => 'absent'
+    }
+  }
 
 }
 
