@@ -27,7 +27,7 @@ class pure_postgres::install
   #Doing this before installing rpm prevents initdb in rpm,
   #which helps in idempotency state detection of new cluster.
 
-  include pure_postgres::config::postgres_user
+  include '::pure_postgres::config::postgres_user'
 
   file { [ '/var/pgpure', '/var/pgpure/postgres', "/var/pgpure/postgres/${pure_postgres::params::pg_version}" ]:
     ensure => 'directory',

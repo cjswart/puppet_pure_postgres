@@ -32,7 +32,7 @@ define pure_postgres::config::pg_hba
 )
 {
 
-  $cmd = shellquote( "${pure_postgres::pg_bin_dir}/modify_pg_hba.py", '-d', $database, '-f', $pg_hba_file, '-m', $method,
+  $cmd = shellquote( "${pure_postgres::pg_bin_dir}/modify_pg_hba.py", '-c', '-d', $database, '-f', $pg_hba_file, '-m', $method,
                       '-n', $netmask, '--state', $state, '-s', $source, '-t', $connection_type, '-u', $user , '--reload')
 
   exec { "exec ${cmd}":

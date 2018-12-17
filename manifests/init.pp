@@ -28,15 +28,16 @@ class pure_postgres
   $pg_data_dir    = $pure_postgres::params::pg_data_dir,
   $pg_xlog_dir    = $pure_postgres::params::pg_xlog_dir,
   $do_ssl         = $pure_postgres::params::do_ssl,
+  $do_syslog      = $pure_postgres::params::do_syslog,
   $pg_ssl_cn      = $pure_postgres::params::pg_ssl_cn,
   $manage_service = $pure_postgres::params::manage_service,
   $autorestart    = $pure_postgres::params::autorestart,
 ) inherits pure_postgres::params
 {
 
-  include pure_postgres::service
-  include pure_postgres::install
-  include pure_postgres::config
+  include '::pure_postgres::service'
+  include '::pure_postgres::install'
+  include '::pure_postgres::config'
 
 }
 

@@ -75,7 +75,7 @@ class pure_postgres::config::initdb
   }
 
   if $pure_postgres::do_ssl {
-    class{ 'pure_postgres::config::ssl':
+    class{ '::pure_postgres::config::ssl':
       require => Exec["initdb ${pure_postgres::pg_data_dir}"],
     }
   }
@@ -105,7 +105,7 @@ class pure_postgres::config::initdb
 #  }
 
   file { "${pure_postgres::params::pg_etc_dir}/conf.d/defaults.conf":
-    ensure  => 'present',
+    ensure  => file,
     owner   => $pure_postgres::params::postgres_user,
     group   => $pure_postgres::params::postgres_group,
     mode    => '0640',
@@ -115,7 +115,7 @@ class pure_postgres::config::initdb
   }
 
   file { "${pure_postgres::pg_data_dir}/postgresql.conf":
-    ensure  => 'absent',
+    ensure  => absent,
     require => Package[$pure_postgres::params::pg_package],
     before  => Class['pure_postgres::service::start'],
   }

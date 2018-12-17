@@ -17,7 +17,7 @@
 
 # == Class: pure_postgres::config::ssl
 #
-# Configs a server certificate for postgres 
+# Configs a server certificate for postgres
 class pure_postgres::config::ssl
 (
   $data      = $pure_postgres::pg_data_dir,
@@ -39,7 +39,7 @@ class pure_postgres::config::ssl
   }
 
   -> file { "${pure_postgres::params::pg_etc_dir}/conf.d/ssl.conf":
-    ensure  => 'present',
+    ensure  => file,
     owner   => $pure_postgres::params::postgres_user,
     group   => $pure_postgres::params::postgres_group,
     mode    => '0640',
