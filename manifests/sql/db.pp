@@ -38,7 +38,7 @@ define pure_postgres::sql::db (
 
     pure_postgres::sql::run_sql { "database ${name} owner ${owner}":
       sql     => "ALTER DATABASE \"${name}\" OWNER TO \"${owner}\";",
-      require => pure_postgres::sql::run_sql["create database ${name}"],
+      require => Pure_postgres::Sql::Run_sql["create database ${name}"],
     }
   }
 
